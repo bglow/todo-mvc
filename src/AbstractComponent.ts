@@ -161,14 +161,14 @@ export abstract class AbstractComponent {
             binding.model.registerCallback(this, this.updateValue.bind(this));
             this.element.onchange = function () {
                 setInputType.call(this);
-                binding.model.set(binding.onUserUpdate((this.element as HTMLInputElement)[valueProp]), false);
+                binding.model.set(binding.onUserUpdate((this.element as HTMLInputElement)[valueProp]));
             }.bind(this);
         } else if (this.value instanceof Binding) {
             let binding = value as Binding<any,Primitive>;
             binding.model.registerCallback(this, this.updateValue.bind(this));
             this.element.onchange = function () {
                 setInputType.call(this);
-                binding.model.set((this.element as HTMLInputElement)[valueProp], false);
+                binding.model.set((this.element as HTMLInputElement)[valueProp]);
             }.bind(this);
         }
 

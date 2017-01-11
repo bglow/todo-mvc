@@ -148,10 +148,10 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             let todoState = todo.get().state.get();
             let editing = todo.get().editing.get();
             let filter = model.filter.get();
-            return (filter == TodoFilter.ALL
+            return "todo " + ((filter == TodoFilter.ALL
                 || (filter == TodoFilter.ACTIVE && todoState == TodoState.ACTIVE)
                 || (filter == TodoFilter.COMPLETED) && todoState == TodoState.COMPLETED)
-                ? (editing ? "editing" : "") : "hidden";
+                ? ((todoState == TodoState.COMPLETED ? "completed " : "") + (editing ? "editing " : "")) : "hidden");
         }
         return new Component_1.default("li")
             .withClass(new Binding_1.Binding(todo.get().state, getTodoCssClass), new Binding_1.Binding(model.filter, getTodoCssClass), new Binding_1.Binding(todo.get().editing, getTodoCssClass))
@@ -171,7 +171,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
             .reinit())
             .reinit();
     }).reinit()).reinit(), new Component_1.default("footer")
-        .withClass("footer")
+        .withClass("footer", new Binding_1.Binding(model.todos.size, function (currentSize) {
+        return currentSize == 0 ? "hidden" : "";
+    }))
         .child(new Component_1.default("span")
         .withClass("todo-count")
         .withText(new Binding_1.Binding(model.todos.size, function (newSize) {

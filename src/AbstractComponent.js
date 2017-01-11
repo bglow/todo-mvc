@@ -147,7 +147,7 @@
                 binding.model.registerCallback(this, this.updateValue.bind(this));
                 this.element.onchange = function () {
                     setInputType.call(this);
-                    binding.model.set(binding.onUserUpdate(this.element[valueProp]), false);
+                    binding.model.set(binding.onUserUpdate(this.element[valueProp]));
                 }.bind(this);
             }
             else if (this.value instanceof Binding_1.Binding) {
@@ -155,7 +155,7 @@
                 binding.model.registerCallback(this, this.updateValue.bind(this));
                 this.element.onchange = function () {
                     setInputType.call(this);
-                    binding.model.set(this.element[valueProp], false);
+                    binding.model.set(this.element[valueProp]);
                 }.bind(this);
             }
             return this;

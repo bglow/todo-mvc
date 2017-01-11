@@ -155,10 +155,10 @@ new Component("section", document.getElementById("app-root"))
                         let todoState = todo.get().state.get();
                         let editing = todo.get().editing.get();
                         let filter = model.filter.get();
-                        return (filter == TodoFilter.ALL
+                        return "todo " + ((filter == TodoFilter.ALL
                         || (filter == TodoFilter.ACTIVE && todoState == TodoState.ACTIVE)
                         || (filter == TodoFilter.COMPLETED) && todoState == TodoState.COMPLETED)
-                            ? (editing ? "editing" : "") : "hidden";
+                            ? ((todoState == TodoState.COMPLETED ? "completed ": "") + (editing ? "editing " : "")) : "hidden");
                     }
 
                     return new Component("li")
@@ -190,7 +190,12 @@ new Component("section", document.getElementById("app-root"))
                 }).reinit()
         ).reinit(),
     new Component("footer")
-        .withClass("footer")
+        .withClass(
+            "footer",
+            new Binding<number,string>(model.todos.size, function (currentSize: number) {
+                return currentSize == 0 ? "hidden" : "";
+            })
+        )
         .child(
             new Component("span")
                 .withClass("todo-count")
