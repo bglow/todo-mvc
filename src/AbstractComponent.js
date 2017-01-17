@@ -10,8 +10,11 @@
     const Binding_1 = require("./Binding");
     const ModelElement_1 = require("./ModelElement");
     class AbstractComponent {
-        constructor(tagName, parent) {
-            this.element = document.createElement(tagName || "div");
+        constructor(tagName, parent, namespace) {
+            if (!namespace)
+                this.element = document.createElement(tagName || "div");
+            else
+                this.element = document.createElementNS(namespace, tagName);
             if (parent != undefined) {
                 this.parent = parent;
                 parent.appendChild(this.element);
@@ -127,6 +130,7 @@
             this.updateText();
             return this;
         }
+        // value should be bound with a two way binding
         withValue(value) {
             this.value = value;
             let valueProp;
@@ -148,14 +152,6 @@
                 this.element.onchange = function () {
                     setInputType.call(this);
                     binding.model.set(binding.onUserUpdate(this.element[valueProp]));
-                }.bind(this);
-            }
-            else if (this.value instanceof Binding_1.Binding) {
-                let binding = value;
-                binding.model.registerCallback(this, this.updateValue.bind(this));
-                this.element.onchange = function () {
-                    setInputType.call(this);
-                    binding.model.set(this.element[valueProp]);
                 }.bind(this);
             }
             return this;

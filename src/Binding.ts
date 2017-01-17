@@ -3,16 +3,17 @@ import {Primitive} from "./Shared";
 import {ModelCollection} from "./ModelCollection";
 import {AbstractComponent} from "./AbstractComponent";
 import ModelArray from "./ModelArray";
+import {AbstractElement} from "./AbstractElement";
 
 export type UpdateCallback<I,O> = (newValue: I) => O;
 
 export class Binding<I,O> {
 
-    readonly model: ModelElement<I>;
+    readonly model: AbstractElement<I>;
 
     readonly onupdate: UpdateCallback<I,O>;
 
-    constructor(model: ModelElement<I>, onupdate:UpdateCallback<I,O>) {
+    constructor(model: AbstractElement<I>, onupdate:UpdateCallback<I,O>) {
         this.model = model;
         this.onupdate = onupdate;
     }
@@ -21,7 +22,7 @@ export class Binding<I,O> {
 
 export type ComponentEventHandler<C extends AbstractComponent> = (this: C, event: Event) => void;
 
-export type ComponentProperty<P extends Primitive> = P | ModelElement<P> | Binding<any,P>;
+export type ComponentProperty<P extends Primitive> = P | AbstractElement<P> | Binding<any,P>;
 
 export interface CollectionBinding<M extends ModelElement<any>,O extends Object> {
 
@@ -33,6 +34,7 @@ export interface CollectionBinding<M extends ModelElement<any>,O extends Object>
 
 export class TwoWayBinding<U,M,O> extends Binding<M,O> {
 
+    readonly model: ModelElement<M>;
     readonly onUserUpdate: UpdateCallback<U,M>;
 
     constructor(model: ModelElement<M>, onModelUpdate: UpdateCallback<M, O>, onUserUpdate: UpdateCallback<U,M>) {

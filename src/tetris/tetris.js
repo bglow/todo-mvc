@@ -5,7 +5,7 @@
     else if (typeof define === 'function' && define.amd) {
         define(dependencies, factory);
     }
-})(["require", "exports", "../SVGComponent", "./Piece", "./BlockModel", "./shared", "./SquarePieceModel", "./SPieceModel", "./ZPieceBlockModel", "./LPieceModel", "./LongPieceModel", "../Component", "../ModelElement", "../Binding", "./PyramdPieceModel"], function (require, exports) {
+})(["require", "exports", "../SVGComponent", "./Piece", "./BlockModel", "./shared", "./SquarePieceModel", "./SPieceModel", "./ZPieceBlockModel", "./LPieceModel", "./LongPieceModel", "../Component", "../ModelElement", "../Binding", "./PyramdPieceModel", "../FunctionalComponent"], function (require, exports) {
     "use strict";
     const SVGComponent_1 = require("../SVGComponent");
     const Piece_1 = require("./Piece");
@@ -20,11 +20,19 @@
     const ModelElement_1 = require("../ModelElement");
     const Binding_1 = require("../Binding");
     const PyramdPieceModel_1 = require("./PyramdPieceModel");
+    const FunctionalComponent_1 = require("../FunctionalComponent");
     const LEFT_KEYCODE = 37;
     const UP_KEYCODE = 38;
     const RIGHT_KEYCODE = 39;
     const DOWN_KEYCODE = 40;
     const SPACE_KEYCODE = 32;
+    const P_KEYCODE = 80;
+    const S_KEYCODE = 83;
+    const PIECES_PER_LEVEL = 100;
+    const POINTS_PER_PIECE = 1;
+    const LEVEL_MULTIPLIER = 2;
+    const POINTS_PER_LINE = 10;
+    const LINE_MULTIPLIER = 2;
     class LineModel {
         constructor() {
             this.blocks = {};
@@ -42,13 +50,27 @@
             }
         }
     }
+    var State;
+    (function (State) {
+        State[State["INIT"] = 0] = "INIT";
+        State[State["IN_PROGRESS"] = 1] = "IN_PROGRESS";
+        State[State["PAUSED"] = 2] = "PAUSED";
+        State[State["GAMEOVER"] = 3] = "GAMEOVER";
+    })(State || (State = {}));
     class TetrisModel {
         constructor() {
             this.message = new ModelElement_1.default();
             this.showMessage = new ModelElement_1.default(false);
-            this.paused = new ModelElement_1.default(false);
-            this.lineCount = new ModelElement_1.default(0);
+            this.state = new ModelElement_1.default(State.INIT);
             this.score = new ModelElement_1.default(0);
+            this.pieceCount = new ModelElement_1.default(0);
+            this.lineCount = new ModelElement_1.default(0);
+            this.level = new FunctionalComponent_1.FunctionalElement(function (pieceCount) {
+                return Math.ceil((pieceCount + 1) / PIECES_PER_LEVEL);
+            }, this.pieceCount);
+            this.tickLength = new FunctionalComponent_1.FunctionalElement(function (level) {
+                return 1000 / Math.log2(level + 1);
+            }, this.level);
         }
         resetCurrentPiece(tetris) {
             this.currentPiece = new TetrisModel.PIECES[Math.floor((Math.random() * (TetrisModel.PIECES.length)))]((shared_1.gameWidth / 2) - 1, 0);
@@ -68,21 +90,30 @@
             this.model.resetCurrentPiece(this);
             this.lastLine = new LineModel();
             document.addEventListener("keyup", (event) => {
+                let state = this.model.state.get();
                 switch (event.keyCode) {
                     case LEFT_KEYCODE:
-                        this.model.currentPiece.move(this, shared_1.Direction.LEFT);
+                        if (state == State.IN_PROGRESS)
+                            this.model.currentPiece.move(this, shared_1.Direction.LEFT);
                         break;
                     case RIGHT_KEYCODE:
-                        this.model.currentPiece.move(this, shared_1.Direction.RIGHT);
+                        if (state == State.IN_PROGRESS)
+                            this.model.currentPiece.move(this, shared_1.Direction.RIGHT);
                         break;
                     case DOWN_KEYCODE:
-                        this.model.currentPiece.move(this, shared_1.Direction.DOWN);
+                        if (state == State.IN_PROGRESS)
+                            this.model.currentPiece.move(this, shared_1.Direction.DOWN);
                         break;
                     case UP_KEYCODE:
-                        this.model.currentPiece.rotate();
+                        if (state == State.IN_PROGRESS)
+                            this.model.currentPiece.rotate();
                         break;
                     case SPACE_KEYCODE:
-                        this.model.currentPiece.move(this, shared_1.Direction.AUTO_DOWN);
+                        if (state == State.IN_PROGRESS)
+                            this.model.currentPiece.move(this, shared_1.Direction.AUTO_DOWN);
+                        break;
+                    case P_KEYCODE:
+                        this.pause();
                         break;
                 }
             });
@@ -105,8 +136,16 @@
                 .withClass("score"))
                 .child(new Component_1.default("span")
                 .withText("Start")
-                .withClass("btn start")
-                .on("click", this.restart.bind(this))
+                .withClass("btn start", new Binding_1.Binding(this.model.state, function (state) {
+                return state == State.INIT || state == State.GAMEOVER ? "" : "hidden";
+            })).on("click", this.restart.bind(this))
+                .reinit(), new Component_1.default("span")
+                .withClass("level", new Binding_1.Binding(this.model.state, function (state) {
+                return state == State.INIT || state == State.GAMEOVER ? "hidden" : "";
+            }))
+                .withText(new Binding_1.Binding(this.model.level, function (level) {
+                return "Level " + level;
+            }))
                 .reinit(), new Component_1.default("label")
                 .withClass("score")
                 .withText(this.model.score)
@@ -114,8 +153,8 @@
                 .withClass("line-count")
                 .withText(this.model.lineCount)
                 .reinit(), new Component_1.default("span")
-                .withText(new Binding_1.Binding(this.model.paused, function (isPaused) {
-                return isPaused ? "Resume" : "Pause";
+                .withText(new Binding_1.Binding(this.model.state, function (state) {
+                return state == State.PAUSED ? "Resume" : "Pause";
             }))
                 .withClass("btn pause")
                 .on("click", this.pause.bind(this))
@@ -130,9 +169,17 @@
                 .reinit();
         }
         restart() {
+            if (this.timeoutHandle)
+                clearTimeout(this.timeoutHandle);
+            this.model.state.set(State.IN_PROGRESS);
+            if (this.model.currentPiece) {
+                for (let block of this.model.currentPiece.blocks)
+                    block.destroy();
+            }
             this.model.showMessage.set(false);
             this.model.score.set(0);
             this.model.lineCount.set(0);
+            this.model.pieceCount.set(0);
             for (let y in this.lines) {
                 let line = this.lines[y];
                 if (line !== this.lastLine)
@@ -164,16 +211,19 @@
                 }
                 this.model.currentPiece.move(this, shared_1.Direction.DOWN);
                 this.tick();
-            }.bind(this), 750);
+            }.bind(this), this.model.tickLength.get());
         }
         pause() {
-            if (this.model.paused.get()) {
+            let state = this.model.state.get();
+            if (state == State.INIT || state == State.GAMEOVER)
+                return;
+            if (this.model.state.get() == State.PAUSED) {
                 this.model.showMessage.set(false);
-                this.model.paused.set(false);
+                this.model.state.set(State.IN_PROGRESS);
                 this.tick();
             }
             else {
-                this.model.paused.set(true);
+                this.model.state.set(State.PAUSED);
                 if (this.timeoutHandle != undefined)
                     clearTimeout(this.timeoutHandle);
                 this.model.message.set("Paused");
@@ -181,17 +231,20 @@
             }
         }
         endGame() {
-            this.pause();
+            this.model.state.set(State.GAMEOVER);
+            if (this.timeoutHandle != undefined)
+                clearTimeout(this.timeoutHandle);
             this.model.message.set("Game over");
             this.model.showMessage.set(true);
         }
         updateLines() {
-            let moreCompletedLines = false;
+            let lines = 0;
             for (let y = shared_1.gameHeight * BlockModel_1.BlockModel.SIDE_LENGTH; y >= 0; y -= BlockModel_1.BlockModel.SIDE_LENGTH) {
                 let line = this.lines[y];
                 if (line == undefined)
                     break;
                 if (line.isComplete()) {
+                    lines++;
                     this.model.lineCount.set(this.model.lineCount.get() + 1);
                     this.model.score.set(this.model.score.get() + 250);
                     line.clear();
@@ -217,11 +270,11 @@
                     y += BlockModel_1.BlockModel.SIDE_LENGTH;
                 }
             }
-            if (moreCompletedLines)
-                this.updateLines();
+            this.model.score.set(this.model.score.get() + ((POINTS_PER_LINE * Math.pow(LEVEL_MULTIPLIER, this.model.level.get() - 1))) * Math.pow(LINE_MULTIPLIER, this.model.level.get() - 1));
         }
         addPiece(piece) {
-            this.model.score.set(this.model.score.get() + 100);
+            this.model.pieceCount.set(this.model.pieceCount.get() + 1);
+            this.model.score.set(this.model.score.get() + (POINTS_PER_PIECE * Math.pow(LEVEL_MULTIPLIER, this.model.level.get())));
             this.svg.child(piece.blocks);
         }
         releasePiece(piece) {

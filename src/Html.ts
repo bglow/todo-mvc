@@ -28,6 +28,8 @@ export type HtmlTagName =
     | "option"
     | "i"
     | "button"
+    | "svg"
+    | "rect"
     ;
 
 export type HtmlAttributeName =
@@ -38,6 +40,12 @@ export type HtmlAttributeName =
     | "name"
     | "type"
     | "placeholder"
+    | "width"
+    | "height"
+    | "x"
+    | "y"
+    | "stroke"
+    | "stroke-width"
     ;
 
 export type EventName =

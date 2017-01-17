@@ -8,20 +8,19 @@
 })(["require", "exports", "./AbstractElement"], function (require, exports) {
     "use strict";
     const AbstractElement_1 = require("./AbstractElement");
-    class ModelElement extends AbstractElement_1.AbstractElement {
-        constructor(data) {
+    class FunctionalElement extends AbstractElement_1.AbstractElement {
+        constructor(handler, ...listenedTo) {
             super();
-            this.data = data;
+            this.handler = handler;
+            this.listenedTo = listenedTo;
+            for (let model of this.listenedTo)
+                model.registerCallback(model, this.doUpdate.bind(this));
         }
         get() {
-            return this.data;
-        }
-        set(data, doUpdate = true) {
-            this.data = data;
-            if (doUpdate)
-                this.doUpdate();
+            return this.handler.apply(this.handler, this.listenedTo.map(function (model) {
+                return model.get();
+            }));
         }
     }
-    Object.defineProperty(exports, "__esModule", { value: true });
-    exports.default = ModelElement;
+    exports.FunctionalElement = FunctionalElement;
 });

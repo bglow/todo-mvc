@@ -4,22 +4,25 @@ import {ComponentEventHandler, ComponentProperty, Binding, TwoWayBinding} from "
 import ModelElement from "./ModelElement";
 
 export abstract class AbstractComponent {
-    protected parent: AbstractComponent | HTMLElement;
-    protected element: HTMLElement;
+    protected parent: AbstractComponent | Element;
+    protected element: Element;
 
-    constructor(tagName?: HtmlTagName, parent?: HTMLElement) {
-        this.element = document.createElement(tagName || "div");
+    constructor(tagName?: HtmlTagName, parent?: Element, namespace?: string) {
+        if (!namespace)
+            this.element = document.createElement(tagName || "div");
+        else
+            this.element = document.createElementNS(namespace, tagName);
         if (parent != undefined) {
             this.parent = parent;
             parent.appendChild(this.element);
         }
     }
 
-    getElement(): HTMLElement {
+    getElement(): Element {
         return this.element;
     }
 
-    setElement(element: HTMLElement) {
+    setElement(element: Element) {
         this.element = element;
     }
 
@@ -95,9 +98,9 @@ export abstract class AbstractComponent {
         return this;
     }
 
-    protected text: ComponentProperty<string>;
+    protected text: ComponentProperty<Primitive>;
 
-    withText(text: ComponentProperty<string>): this {
+    withText(text: ComponentProperty<Primitive>): this {
         this.text = text;
         if (text instanceof ModelElement) {
             (text as ModelElement<string>).registerCallback(this, this.updateText.bind(this));
@@ -139,7 +142,8 @@ export abstract class AbstractComponent {
 
     protected value: ComponentProperty<Primitive> | TwoWayBinding<Primitive,any,any>;
 
-    withValue(value: ComponentProperty<Primitive> | TwoWayBinding<Primitive,any,any>): this {
+    // value should be bound with a two way binding
+    withValue(value: Primitive | ModelElement<Primitive> | TwoWayBinding<Primitive,any,any>): this {
 
         this.value = value;
         let valueProp: string;
@@ -152,23 +156,16 @@ export abstract class AbstractComponent {
 
         if (value instanceof ModelElement) {
             (value as ModelElement<Primitive>).registerCallback(this, this.updateValue.bind(this));
-            this.element.onchange = function () {
+            (this.element as HTMLElement).onchange = function () {
                 setInputType.call(this);
                 (value as ModelElement<Primitive>).set((this.element as HTMLInputElement)[valueProp]);
             }.bind(this)
         } else if (this.value instanceof TwoWayBinding) {
             let binding = value as TwoWayBinding<Primitive,any,any>;
             binding.model.registerCallback(this, this.updateValue.bind(this));
-            this.element.onchange = function () {
+            (this.element as HTMLElement).onchange = function () {
                 setInputType.call(this);
                 binding.model.set(binding.onUserUpdate((this.element as HTMLInputElement)[valueProp]));
-            }.bind(this);
-        } else if (this.value instanceof Binding) {
-            let binding = value as Binding<any,Primitive>;
-            binding.model.registerCallback(this, this.updateValue.bind(this));
-            this.element.onchange = function () {
-                setInputType.call(this);
-                binding.model.set((this.element as HTMLInputElement)[valueProp]);
             }.bind(this);
         }
 
@@ -186,7 +183,7 @@ export abstract class AbstractComponent {
         }
         let valueProp: string = this.element.getAttribute("type") == "checkbox" || this.element.getAttribute("type") == "radio" ? "checked" : "value";
         (this.element as HTMLInputElement)[valueProp] = "";
-        this.element.onchange = null;
+        (this.element as HTMLElement).onchange = null;
         return this;
     }
 

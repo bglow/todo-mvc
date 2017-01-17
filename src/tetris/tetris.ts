@@ -12,12 +12,20 @@ import Component from "../Component";
 import ModelElement from "../ModelElement";
 import {Binding} from "../Binding";
 import {PyramdPieceModel} from "./PyramdPieceModel";
+import {FunctionalElement} from "../FunctionalComponent";
 
 const LEFT_KEYCODE = 37;
 const UP_KEYCODE = 38;
 const RIGHT_KEYCODE = 39;
 const DOWN_KEYCODE = 40;
 const SPACE_KEYCODE = 32;
+const P_KEYCODE = 80;
+const S_KEYCODE = 83;
+const PIECES_PER_LEVEL = 100;
+const POINTS_PER_PIECE = 1;
+const LEVEL_MULTIPLIER = 2;
+const POINTS_PER_LINE = 10;
+const LINE_MULTIPLIER = 2;
 
 class LineModel {
     readonly blocks: {[x: number]: BlockModel} = {};
@@ -34,13 +42,32 @@ class LineModel {
     }
 }
 
+enum State {
+    INIT,
+    IN_PROGRESS,
+    PAUSED,
+    GAMEOVER
+}
+
 class TetrisModel {
     currentPiece: PieceModel;
     readonly message = new ModelElement<string>();
     readonly showMessage = new ModelElement<boolean>(false);
-    readonly paused = new ModelElement<boolean>(false);
-    readonly lineCount = new ModelElement<number>(0);
+    readonly state = new ModelElement<State>(State.INIT);
     readonly score = new ModelElement<number>(0);
+    readonly pieceCount = new ModelElement<number>(0);
+    readonly level: FunctionalElement<number>;
+    readonly lineCount = new ModelElement<number>(0);
+    readonly tickLength: FunctionalElement<number>;
+
+    constructor() {
+        this.level = new FunctionalElement<number>(function (pieceCount: number) {
+            return Math.ceil((pieceCount + 1) / PIECES_PER_LEVEL);
+        }, this.pieceCount);
+        this.tickLength = new FunctionalElement<number>(function (level: number) {
+            return 1000 / Math.log2(level + 1);
+        }, this.level);
+    }
 
     protected static PIECES = [SquarePieceModel, SPieceBlockModel, ZPieceBlockModel, LPieceModel, LongPieceModel, PyramdPieceModel];
 
@@ -69,22 +96,34 @@ export class Tetris {
         this.lastLine = new LineModel();
 
         document.addEventListener("keyup", (event: KeyboardEvent) => {
+            let state = this.model.state.get();
             switch (event.keyCode) {
                 case LEFT_KEYCODE:
-                    this.model.currentPiece.move(this, Direction.LEFT);
+                    if (state == State.IN_PROGRESS)
+                        this.model.currentPiece.move(this, Direction.LEFT);
                     break;
                 case RIGHT_KEYCODE:
-                    this.model.currentPiece.move(this, Direction.RIGHT);
+                    if (state == State.IN_PROGRESS)
+                        this.model.currentPiece.move(this, Direction.RIGHT);
                     break;
                 case DOWN_KEYCODE:
-                    this.model.currentPiece.move(this, Direction.DOWN);
+                    if (state == State.IN_PROGRESS)
+                        this.model.currentPiece.move(this, Direction.DOWN);
                     break;
                 case UP_KEYCODE:
-                    this.model.currentPiece.rotate();
+                    if (state == State.IN_PROGRESS)
+                        this.model.currentPiece.rotate();
                     break;
                 case SPACE_KEYCODE:
-                    this.model.currentPiece.move(this, Direction.AUTO_DOWN);
+                    if (state == State.IN_PROGRESS)
+                        this.model.currentPiece.move(this, Direction.AUTO_DOWN);
                     break;
+                case P_KEYCODE:
+                    this.pause();
+                    break;
+                // case S_KEYCODE:
+                //     this.restart();
+                //     break;
             }
         });
         this.svg = new SVGComponent("svg")
@@ -111,8 +150,20 @@ export class Tetris {
                 .child(
                     new Component("span")
                         .withText("Start")
-                        .withClass("btn start")
-                        .on("click", this.restart.bind(this))
+                        .withClass(
+                            "btn start",
+                            new Binding<State,string>(this.model.state, function (state: State): string {
+                                return state == State.INIT || state == State.GAMEOVER ? "" : "hidden";
+                            })
+                        ).on("click", this.restart.bind(this))
+                        .reinit(),
+                    new Component("span")
+                        .withClass("level", new Binding<State,string>(this.model.state, function (state: State): string {
+                            return state == State.INIT || state == State.GAMEOVER ? "hidden" : "";
+                        }))
+                        .withText(new Binding<number,string>(this.model.level, function (level: number) {
+                            return "Level " + level;
+                        }))
                         .reinit(),
                     new Component("label")
                         .withClass("score")
@@ -123,8 +174,8 @@ export class Tetris {
                         .withText(this.model.lineCount)
                         .reinit(),
                     new Component("span")
-                        .withText(new Binding<boolean, string>(this.model.paused, function (isPaused: boolean) {
-                            return isPaused ? "Resume" : "Pause"
+                        .withText(new Binding<State, string>(this.model.state, function (state: State) {
+                            return state == State.PAUSED ? "Resume" : "Pause"
                         }))
                         .withClass("btn pause")
                         .on("click", this.pause.bind(this))
@@ -144,9 +195,17 @@ export class Tetris {
     }
 
     protected restart(): void {
+        if (this.timeoutHandle)
+            clearTimeout(this.timeoutHandle);
+        this.model.state.set(State.IN_PROGRESS);
+        if (this.model.currentPiece) {
+            for (let block of this.model.currentPiece.blocks)
+                block.destroy();
+        }
         this.model.showMessage.set(false);
         this.model.score.set(0);
         this.model.lineCount.set(0);
+        this.model.pieceCount.set(0);
         for (let y in this.lines) {
             let line = this.lines[y];
             if (line !== this.lastLine)
@@ -179,16 +238,20 @@ export class Tetris {
             }
             this.model.currentPiece.move(this, Direction.DOWN);
             this.tick();
-        }.bind(this),750);
+        }.bind(this),this.model.tickLength.get());
     }
 
     protected pause() {
-        if (this.model.paused.get()) {
+        let state = this.model.state.get();
+        if (state == State.INIT || state == State.GAMEOVER)
+            return;
+
+        if (this.model.state.get() == State.PAUSED) {
             this.model.showMessage.set(false);
-            this.model.paused.set(false);
+            this.model.state.set(State.IN_PROGRESS);
             this.tick();
         } else {
-            this.model.paused.set(true);
+            this.model.state.set(State.PAUSED);
             if (this.timeoutHandle != undefined)
                 clearTimeout(this.timeoutHandle);
             this.model.message.set("Paused");
@@ -197,18 +260,21 @@ export class Tetris {
     }
 
     endGame(): void {
-        this.pause();
+        this.model.state.set(State.GAMEOVER);
+        if (this.timeoutHandle != undefined)
+            clearTimeout(this.timeoutHandle);
         this.model.message.set("Game over");
         this.model.showMessage.set(true);
     }
 
     private updateLines(): void {
-        let moreCompletedLines = false;
+        let lines = 0;
         for (let y = gameHeight * BlockModel.SIDE_LENGTH; y >= 0; y -= BlockModel.SIDE_LENGTH) {
             let line = this.lines[y];
             if (line == undefined)
                 break;
             if (line.isComplete()) {
+                lines++;
                 this.model.lineCount.set(this.model.lineCount.get() + 1);
                 this.model.score.set(this.model.score.get() + 250);
                 line.clear();
@@ -234,12 +300,12 @@ export class Tetris {
                 y += BlockModel.SIDE_LENGTH;
             }
         }
-        if (moreCompletedLines)
-            this.updateLines();
+        this.model.score.set(this.model.score.get() + ((POINTS_PER_LINE * Math.pow(LEVEL_MULTIPLIER, this.model.level.get() - 1))) * Math.pow(LINE_MULTIPLIER, this.model.level.get() -1));
     }
 
     addPiece(piece: Piece): void {
-        this.model.score.set(this.model.score.get() + 100)
+        this.model.pieceCount.set(this.model.pieceCount.get() + 1);
+        this.model.score.set(this.model.score.get() + (POINTS_PER_PIECE * Math.pow(LEVEL_MULTIPLIER, this.model.level.get())));
         this.svg.child(piece.blocks);
     }
 
