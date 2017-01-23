@@ -12,7 +12,7 @@
         constructor(handler, ...listenedTo) {
             super();
             this.handler = handler;
-            this.listenedTo = listenedTo;
+            this.listenedTo = listenedTo || [];
             for (let model of this.listenedTo)
                 model.registerCallback(model, this.doUpdate.bind(this));
         }

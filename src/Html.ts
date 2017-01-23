@@ -30,6 +30,7 @@ export type HtmlTagName =
     | "button"
     | "svg"
     | "rect"
+    | "canvas"
     ;
 
 export type HtmlAttributeName =

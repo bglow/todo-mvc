@@ -2,7 +2,7 @@ import {AbstractComponent} from "./AbstractComponent";
 import {UpdateCallback} from "./Binding";
 
 export abstract class AbstractElement<V> {
-    protected updateCallbacks: Map<AbstractComponent | AbstractElement<any>, Set<UpdateCallback<V,any>>>;
+    protected updateCallbacks: Map<any, Set<UpdateCallback<V,any>>>;
     protected boundComponents: Set<AbstractComponent>;
 
     abstract get(): V;
@@ -21,7 +21,7 @@ export abstract class AbstractElement<V> {
         this.boundComponents.add(component);
     }
 
-    registerCallback(component: AbstractComponent | AbstractElement<any>, updateCallback: UpdateCallback<any,any>): void {
+    registerCallback(component: any, updateCallback: UpdateCallback<any,any>): void {
         if (!this.updateCallbacks)
             this.updateCallbacks = new Map();
 
@@ -33,7 +33,7 @@ export abstract class AbstractElement<V> {
         callbackSet.add(updateCallback);
     }
 
-    unregisterCallback(component: AbstractComponent | AbstractElement<any>, callback?: UpdateCallback<any,any>): void {
+    unregisterCallback(component: any, callback?: UpdateCallback<any,any>): void {
         if (!this.updateCallbacks)
             return;
 
@@ -44,7 +44,6 @@ export abstract class AbstractElement<V> {
             if (set)
                 set.delete(callback);
         }
-
     }
 
     protected doUpdate(): void {

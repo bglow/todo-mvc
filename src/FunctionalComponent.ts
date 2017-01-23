@@ -3,13 +3,13 @@ import ModelElement from "./ModelElement";
 
 export class FunctionalElement<V> extends AbstractElement<V> {
 
-    protected readonly handler: (...models: ModelElement<any>[]) => V;
-    protected readonly listenedTo: AbstractElement<any>[];
+    protected readonly handler: (...models: any[]) => V;
+    protected listenedTo: AbstractElement<any>[];
 
-    constructor(handler: (...models: any[]) => V, ...listenedTo: AbstractElement<any>[]) {
+    constructor(handler: (...models: any[]) => V, ...listenedTo: any[]) {
         super();
         this.handler = handler;
-        this.listenedTo = listenedTo;
+        this.listenedTo = listenedTo || [];
         for (let model of this.listenedTo)
             model.registerCallback(model, this.doUpdate.bind(this));
     }
@@ -19,4 +19,5 @@ export class FunctionalElement<V> extends AbstractElement<V> {
             return model.get();
         }));
     }
+
 }
