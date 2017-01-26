@@ -258,7 +258,7 @@
     exports.AbstractComponent = AbstractComponent;
 });
 
-},{"./Binding":3,"./ModelElement":10}],2:[function(require,module,exports){
+},{"./Binding":4,"./ModelElement":9}],2:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -315,6 +315,202 @@
 });
 
 },{}],3:[function(require,module,exports){
+(function (dependencies, factory) {
+    if (typeof module === 'object' && typeof module.exports === 'object') {
+        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === 'function' && define.amd) {
+        define(dependencies, factory);
+    }
+})(["require", "exports", "./AbstractComponent", "./Time", "./Intersectable", "./ModelElement", "./FunctionalComponent"], function (require, exports) {
+    "use strict";
+    const AbstractComponent_1 = require("./AbstractComponent");
+    const Time_1 = require("./Time");
+    const Intersectable_1 = require("./Intersectable");
+    const ModelElement_1 = require("./ModelElement");
+    const FunctionalComponent_1 = require("./FunctionalComponent");
+    class CanvasElement {
+        constructor(x, y, w, h, draw, vx, vy, onTurn, anchorX, anchorY) {
+            this.x = new ModelElement_1.default(x);
+            this.y = new ModelElement_1.default(y);
+            this.w = new ModelElement_1.default(w);
+            this.h = new ModelElement_1.default(h);
+            this.draw = draw;
+            this.vx = vx || 0;
+            this.vy = vy || 0;
+            this.ax = 0;
+            this.ay = 0;
+            this.onTurn = onTurn;
+            this.anchorX = anchorX || new FunctionalComponent_1.FunctionalElement((x, w) => {
+                return x + w / 2;
+            }, this.x, this.w);
+            this.anchorY = anchorY || new FunctionalComponent_1.FunctionalElement((y, h) => {
+                return y + h / 2;
+            }, this.y, this.h);
+        }
+        resetBounds() {
+            this.bL = null;
+            this.bT = null;
+            this.bT = null;
+            this.bB = null;
+            return this;
+        }
+        bounded(direction) {
+            switch (direction) {
+                case Intersectable_1.ExtrudeDirection.BOTTOM:
+                    return this.bB != undefined;
+                case Intersectable_1.ExtrudeDirection.TOP:
+                    return this.bT != undefined;
+                case Intersectable_1.ExtrudeDirection.LEFT:
+                    return this.bL != undefined;
+                case Intersectable_1.ExtrudeDirection.RIGHT:
+                    return this.bR != undefined;
+            }
+        }
+        move() {
+            this.x.set(this.nextX(this.x.get()));
+            this.vx += this.ax;
+            this.y.set(this.nextY(this.y.get()));
+            this.vy += this.ay;
+            return this;
+        }
+        nextX(initX) {
+            let nextX = initX + (this.vx + this.ax);
+            if (this.bL && nextX < this.bL) {
+                nextX = this.bL;
+            }
+            else if (this.bR && nextX > this.bR) {
+                nextX = this.bR;
+            }
+            return nextX;
+        }
+        nextY(initY) {
+            let nextY = initY + (this.vy + this.ay);
+            if (this.bT && nextY < this.bT) {
+                nextY = this.bT;
+            }
+            else if (this.bB && nextY + this.h.get() > this.bB) {
+                nextY = this.bB - this.h.get();
+            }
+            return nextY;
+        }
+        extrude(other, direction) {
+            switch (direction) {
+                case Intersectable_1.ExtrudeDirection.TOP:
+                    other.bB = this.y.get();
+                    other.vy = CanvasElement.SPEED_EPSILON;
+                    break;
+                case Intersectable_1.ExtrudeDirection.LEFT:
+                    other.bR = this.x.get();
+                    other.vx = CanvasElement.SPEED_EPSILON;
+                    break;
+                case Intersectable_1.ExtrudeDirection.BOTTOM:
+                    other.bT = this.y.get();
+                    other.vy = -1 * CanvasElement.SPEED_EPSILON;
+                    break;
+                case Intersectable_1.ExtrudeDirection.RIGHT:
+                    other.bL = this.x.get() + this.w.get();
+                    other.vx = -1 * CanvasElement.SPEED_EPSILON;
+                    break;
+            }
+        }
+    }
+    // on collision immediately reduce the velocity to a small but non-zero number to avoid shaking near edges
+    CanvasElement.SPEED_EPSILON = 3;
+    exports.CanvasElement = CanvasElement;
+    class DynamicCanvasElement extends CanvasElement {
+        constructor(x, y, w, h, draw, vx, vy, onTurn, anchorX, anchorY) {
+            super(x, y, w, h, draw, vx, vy, onTurn, anchorX, anchorY);
+            this._p1 = {
+                x: function () {
+                    return this.anchorX.get();
+                }.bind(this),
+                y: function () {
+                    return this.anchorY.get();
+                }.bind(this)
+            };
+            this._p2 = {
+                x: function () {
+                    return this.nextX(this.anchorX.get());
+                }.bind(this),
+                y: function () {
+                    return this.nextY(this.anchorY.get());
+                }.bind(this)
+            };
+        }
+        p1() {
+            return this._p1;
+        }
+        p2() {
+            return this._p2;
+        }
+    }
+    exports.DynamicCanvasElement = DynamicCanvasElement;
+    class StaticCanvasElement extends CanvasElement {
+        constructor(x, y, w, h, draw, vx, vy, onTurn, anchorX, anchorY) {
+            super(x, y, w, h, draw, vx, vy, onTurn, anchorX, anchorY);
+            this._lines = [
+                new Intersectable_1.StaticLine(this.x.get(), this.y.get(), this.x.get() + this.w.get(), this.y.get() + this.h.get()),
+                new Intersectable_1.StaticLine(this.x, this.y.get() + this.h.get(), this.x.get() + this.w.get(), this.y.get())
+            ];
+        }
+        lines() {
+            return this._lines;
+        }
+    }
+    exports.StaticCanvasElement = StaticCanvasElement;
+    class AnimatableCanvas extends AbstractComponent_1.AbstractComponent {
+        constructor(parent) {
+            super("canvas", parent);
+            this.time = new Time_1.Time(1000 / 24);
+            this.elements = { static: {}, dynamic: {} };
+            this.groupedByRank = {};
+            this.time.onTic(this.onTic.bind(this));
+        }
+        onTic() {
+            this.getContext()
+                .clearRect(0, 0, this.getElement().width, this.getElement().height);
+            for (let element of this.rankedElements) {
+                element.resetBounds();
+                if (element.onTurn)
+                    element.onTurn(this.elements);
+            }
+            for (let element of this.rankedElements)
+                element.move();
+            for (let element of this.rankedElements) {
+                if (element.draw)
+                    element.draw(this.getContext());
+            }
+        }
+        getContext() {
+            return this.element.getContext('2d');
+        }
+        withElement(element, name, rank) {
+            if (element instanceof StaticCanvasElement)
+                this.elements.static[name || Object.keys(this.elements).length] = element;
+            else if (element instanceof DynamicCanvasElement)
+                this.elements.dynamic[name || Object.keys(this.elements).length] = element;
+            if (!this.groupedByRank[rank])
+                this.groupedByRank[rank] = [];
+            this.groupedByRank[rank].push(element);
+            return this;
+        }
+        reinit() {
+            super.reinit();
+            this.rankedElements = [];
+            for (let rank of Object.keys(this.groupedByRank).sort(function (r1, r2) {
+                return Number(r1) - Number(r2);
+            })) {
+                for (let element of this.groupedByRank[rank])
+                    this.rankedElements.push(element);
+            }
+            return this;
+        }
+    }
+    exports.AnimatableCanvas = AnimatableCanvas;
+});
+
+},{"./AbstractComponent":1,"./FunctionalComponent":5,"./Intersectable":6,"./ModelElement":9,"./Time":10}],4:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -404,99 +600,7 @@
     exports.persist = persist;
 });
 
-},{"./ModelArray":8,"./ModelElement":10}],4:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
-    }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
-    }
-})(["require", "exports", "./AbstractComponent"], function (require, exports) {
-    "use strict";
-    const AbstractComponent_1 = require("./AbstractComponent");
-    class CanvasComponent extends AbstractComponent_1.AbstractComponent {
-        constructor(parent) {
-            super("canvas", parent);
-            this.canvasFunctions = [];
-        }
-        getContext() {
-            return this.element.getContext('2d');
-        }
-        withDrawFunction(canvasFunction) {
-            this.canvasFunctions.push(canvasFunction);
-            canvasFunction.bindCanvas(this);
-            return this;
-        }
-        reinit() {
-            super.reinit();
-            // clear the canvas before redrawing
-            this.getContext()
-                .clearRect(0, 0, this.getElement().width, this.getElement().height);
-            for (let canvasFunction of this.canvasFunctions)
-                canvasFunction.get();
-            return this;
-        }
-    }
-    exports.CanvasComponent = CanvasComponent;
-});
-
-},{"./AbstractComponent":1}],5:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
-    }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
-    }
-})(["require", "exports", "./FunctionalComponent", "./ModelElement"], function (require, exports) {
-    "use strict";
-    const FunctionalComponent_1 = require("./FunctionalComponent");
-    const ModelElement_1 = require("./ModelElement");
-    class CanvasFunction extends FunctionalComponent_1.FunctionalElement {
-        constructor(initX = 0, initY = 0, drawHandler, ...listenedTo) {
-            super(() => {
-                if (this.canvasComponent) {
-                    this.canvasComponent.getContext().setTransform(1, 0, 0, 1, 0, 0);
-                    this.canvasComponent.getContext().translate(this.x.get(), this.y.get());
-                    drawHandler.apply(this.canvasComponent.getContext(), this.listenedTo.map(function (model) {
-                        return model.get();
-                    }));
-                }
-            });
-            this.drawHandlers = [];
-            this.x = new ModelElement_1.default(initX);
-            this.y = new ModelElement_1.default(initY);
-            for (let model of listenedTo) {
-                this.listenedTo.push(model);
-            }
-            this.drawHandlers.push(drawHandler);
-        }
-        // implementing classes should call this after adding their listenedTos
-        postConstruct() {
-            for (let model of this.listenedTo)
-                model.registerCallback(model, this.doUpdate.bind(this));
-        }
-        get() {
-            this.handler.apply(this, this.listenedTo.map(function (model) {
-                return model.get();
-            }));
-        }
-        bindCanvas(canvasComponent) {
-            this.canvasComponent = canvasComponent;
-        }
-        unbindCanvas() {
-            this.canvasComponent = null;
-        }
-        doUpdate() {
-            if (this.canvasComponent)
-                this.canvasComponent.reinit();
-        }
-    }
-    exports.CanvasFunction = CanvasFunction;
-});
-
-},{"./FunctionalComponent":6,"./ModelElement":10}],6:[function(require,module,exports){
+},{"./ModelArray":7,"./ModelElement":9}],5:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -524,7 +628,7 @@
     exports.FunctionalElement = FunctionalElement;
 });
 
-},{"./AbstractElement":2}],7:[function(require,module,exports){
+},{"./AbstractElement":2}],6:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -545,39 +649,39 @@
     class DynamicPoint {
         constructor(x, y) {
             this._x = x;
-            this._y = y;
-            this.__p1 = { x: this._x.get(), y: this._y.get() };
-            this.__p2 = { x: this._x.get(), y: this._y.get() };
             this._x.registerCallback(this, (newX) => {
-                this.__p1.x = newX;
-                this.__p1.y = this._y.get();
-                let temp = this.__p2;
-                this.__p2 = this.__p1;
-                this.__p1 = temp;
+                this._px1 = this._px2;
+                this._py1 = this._py2;
+                this._px2 = newX;
+                this._py2 = this._y.get();
             });
+            this._y = y;
             this._y.registerCallback(this, (newY) => {
-                this.__p1.y = newY;
-                this.__p1.x = this._x.get();
-                let temp = this.__p2;
-                this.__p2 = this.__p1;
-                this.__p1 = temp;
+                this._px1 = this._px2;
+                this._py1 = this._py2;
+                this._py2 = newY;
+                this._px2 = this._x.get();
             });
             this._p1 = {
-                x: function () { return this.__p1.x; }.bind(this),
-                y: function () { return this.__p1.y; }.bind(this)
-            };
-            this._p2 = {
-                x: function () { return this.__p2.x; }.bind(this),
-                y: function () { return this.__p2.y; }.bind(this)
-            };
-            this._pProj = {
                 x: function () {
-                    return this._p2.x() + (this._p2.x() - this._p1.x());
+                    return this._x.get();
                 }.bind(this),
                 y: function () {
-                    return this._p2.y() + (this._p2.y() - this._p1.y());
+                    return this._y.get();
                 }.bind(this)
             };
+            this._p2 = {
+                x: function () {
+                    return this._x.get() + (this._px2 - this._px1);
+                }.bind(this),
+                y: function () {
+                    return this._y.get() + (this._py2 - this._py1);
+                }.bind(this)
+            };
+            this._px1 = this._x.get();
+            this._px2 = this._x.get();
+            this._py1 = this._y.get();
+            this._py2 = this._y.get();
         }
         x() {
             return this._x.get();
@@ -586,10 +690,10 @@
             return this._y.get();
         }
         p1() {
-            return this._p2;
+            return this._p1;
         }
         p2() {
-            return this._pProj;
+            return this._p2;
         }
     }
     exports.DynamicPoint = DynamicPoint;
@@ -601,15 +705,21 @@
         ExtrudeDirection[ExtrudeDirection["LEFT"] = 4] = "LEFT";
     })(ExtrudeDirection = exports.ExtrudeDirection || (exports.ExtrudeDirection = {}));
     class StaticLine {
-        constructor(p1, p2) {
-            this._p1 = p1;
-            this._p2 = p2;
+        constructor(x1, y1, x2, y2) {
+            this._p1 = {
+                x: () => { return x1; },
+                y: () => { return y1; }
+            };
+            this._p2 = {
+                x: () => { return x2; },
+                y: () => { return y2; }
+            };
         }
         p1() {
-            return this._p1.p2();
+            return this._p1;
         }
         p2() {
-            return this._p2.p2();
+            return this._p2;
         }
         // if there is an intersection, return the extrusion direction of other relative this
         // i.e. if return LEFT, indicates that other extrudes to the left of this
@@ -644,20 +754,18 @@
         return false;
     }
     exports.intersects = intersects;
-    function enters(intersectable, moveable) {
+    function enters(intersectable, movingPoint) {
         for (let line of intersectable.lines()) {
-            for (let point of moveable.dynamicPoints()) {
-                let result = line.intersects(point);
-                if (result)
-                    return result;
-            }
+            let result = line.intersects(movingPoint);
+            if (result)
+                return result;
         }
         return false;
     }
     exports.enters = enters;
 });
 
-},{}],8:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -706,7 +814,7 @@
     exports.default = ModelArray;
 });
 
-},{"./ModelCollection":9,"./ModelElement":10}],9:[function(require,module,exports){
+},{"./ModelCollection":8,"./ModelElement":9}],8:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -743,7 +851,7 @@
     exports.ModelCollection = ModelCollection;
 });
 
-},{"./ModelElement":10}],10:[function(require,module,exports){
+},{"./ModelElement":9}],9:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -772,7 +880,7 @@
     exports.default = ModelElement;
 });
 
-},{"./AbstractElement":2}],11:[function(require,module,exports){
+},{"./AbstractElement":2}],10:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -780,102 +888,25 @@
     else if (typeof define === 'function' && define.amd) {
         define(dependencies, factory);
     }
-})(["require", "exports", "../CanvasFunction", "../Intersectable"], function (require, exports) {
+})(["require", "exports"], function (require, exports) {
     "use strict";
-    const CanvasFunction_1 = require("../CanvasFunction");
-    const Intersectable_1 = require("../Intersectable");
-    class MoveableModel extends CanvasFunction_1.CanvasFunction {
-        constructor(initX, initY, gravity = 1, friction = 1, drawHandler, ...listenedTo) {
-            super(initX, initY, drawHandler);
-            this._jump_flag = false;
-            this.entersCallbacks = new Map();
-            for (let model of listenedTo) {
-                this.listenedTo.push(model);
-            }
-            this.gravity = gravity;
-            this.friction = friction;
+    class Time {
+        constructor(frameLength) {
+            this.callbacks = new Set();
+            this.frameLength = frameLength;
+            this.intervalId = window.setInterval(() => {
+                for (let callback of this.callbacks.values())
+                    callback();
+            }, this.frameLength);
         }
-        onEnters(other, callback) {
-            this.entersCallbacks.set(other, callback);
-            return this;
-        }
-        checkEnters() {
-            let cancel = false;
-            for (let entry of this.entersCallbacks.entries()) {
-                let other = entry[0];
-                let callback = entry[1];
-                let extrudes = Intersectable_1.enters(other, this);
-                if (extrudes) {
-                    if (callback(extrudes))
-                        cancel = true;
-                }
-            }
-            return cancel;
-        }
-        jump(strength) {
-            if (this._jump_flag)
-                return;
-            this._jump_flag = true;
-            let t = 1;
-            let yInit = this.y.get();
-            let update = () => {
-                let yp = yInit - strength * t + this.gravity * Math.pow(t, 2);
-                if (yp < yInit) {
-                    this.y.set(yp);
-                    console.log(t, this.y.get());
-                    t++;
-                    if (this.checkEnters()) {
-                        this._jump_flag = false;
-                        return;
-                    }
-                    setTimeout(update, MoveableModel.FRAME_LENGTH);
-                }
-                else {
-                    this.y.set(yInit);
-                    this.checkEnters();
-                    this._jump_flag = false;
-                }
-            };
-            update();
-        }
-        right() {
-            let progress = 10 / this.friction;
-            let maxT = 10;
-            let t = 0;
-            let xInit = this.x.get();
-            let update = () => {
-                this.x.set(xInit + progress * t);
-                t++;
-                if (t <= (maxT / 2)) {
-                    if (this.checkEnters())
-                        return;
-                    setTimeout(update, MoveableModel.FRAME_LENGTH);
-                }
-            };
-            update();
-        }
-        left() {
-            let progress = 10 / this.friction;
-            let maxT = 10;
-            let t = 0;
-            let xInit = this.x.get();
-            let update = () => {
-                this.x.set(xInit - progress * t);
-                t++;
-                if (t <= (maxT / 2)) {
-                    if (this.checkEnters())
-                        return;
-                    setTimeout(update, MoveableModel.FRAME_LENGTH);
-                }
-            };
-            update();
+        onTic(callback) {
+            this.callbacks.add(callback);
         }
     }
-    MoveableModel.FRAME_LENGTH = 1000 / 24;
-    exports.MoveableModel = MoveableModel;
+    exports.Time = Time;
 });
 
-},{"../CanvasFunction":5,"../Intersectable":7}],12:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 (function (dependencies, factory) {
     if (typeof module === 'object' && typeof module.exports === 'object') {
         var v = factory(require, exports); if (v !== undefined) module.exports = v;
@@ -883,112 +914,90 @@
     else if (typeof define === 'function' && define.amd) {
         define(dependencies, factory);
     }
-})(["require", "exports", "../CanvasComponent", "../ModelElement", "./Moveable", "../Intersectable", "../FunctionalComponent"], function (require, exports) {
+})(["require", "exports", "../AnimatableCanvas", "../Intersectable"], function (require, exports) {
     "use strict";
-    const CanvasComponent_1 = require("../CanvasComponent");
-    const ModelElement_1 = require("../ModelElement");
-    const Moveable_1 = require("./Moveable");
+    const AnimatableCanvas_1 = require("../AnimatableCanvas");
     const Intersectable_1 = require("../Intersectable");
-    const FunctionalComponent_1 = require("../FunctionalComponent");
     const LEFT_KEYCODE = 37;
     const UP_KEYCODE = 38;
     const RIGHT_KEYCODE = 39;
     const DOWN_KEYCODE = 40;
     const GAME_HEIGHT = 400;
     const GAME_WIDTH = 400;
-    class PlayerModel extends Moveable_1.MoveableModel {
-        constructor(initX, initY, width, height, gravity, friction) {
-            super(initX, initY, gravity, friction, function (x, y, width, height) {
-                let ctx = this;
-                ctx.strokeRect(0, 0, width, height);
+    class Race extends AnimatableCanvas_1.AnimatableCanvas {
+        constructor() {
+            super(document.getElementById("app-root"));
+            let player = new AnimatableCanvas_1.DynamicCanvasElement(0, 390, 10, 10, function (ctx) {
+                ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
             });
-            this.width = new ModelElement_1.default(width);
-            this.height = new ModelElement_1.default(height);
-            this.listenedTo.push(this.x, this.y, this.width, this.height);
-            let pNW = new Intersectable_1.DynamicPoint(new FunctionalComponent_1.FunctionalElement((x) => {
-                return x;
-            }, this.x), new FunctionalComponent_1.FunctionalElement((y) => {
-                return y;
-            }, this.y));
-            let pSE = new Intersectable_1.DynamicPoint(new FunctionalComponent_1.FunctionalElement((x, width) => {
-                return x + width;
-            }, this.x, this.width), new FunctionalComponent_1.FunctionalElement((y, height) => {
-                return y + height;
-            }, this.y, this.height));
-            let pSW = new Intersectable_1.DynamicPoint(new FunctionalComponent_1.FunctionalElement((x) => {
-                return x;
-            }, this.x), new FunctionalComponent_1.FunctionalElement((y, height) => {
-                return y + height;
-            }, this.y, this.height));
-            let pNE = new Intersectable_1.DynamicPoint(new FunctionalComponent_1.FunctionalElement((x, width) => {
-                return x + width;
-            }, this.x, this.width), new FunctionalComponent_1.FunctionalElement((y) => {
-                return y;
-            }, this.y));
-            this._points = [pNW, pSE, pSW, pNE];
-            this._lines = [new Intersectable_1.StaticLine(pNW, pSE), new Intersectable_1.StaticLine(pSW, pNE)];
-            this.postConstruct();
+            player.ay = 1;
+            let ground = new AnimatableCanvas_1.StaticCanvasElement(0, GAME_HEIGHT, GAME_WIDTH, 1, function (ctx) {
+                ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
+            }, 0, 0, function (elements) {
+                let player = elements.dynamic["player"];
+                let direction = Intersectable_1.enters(this, player);
+                if (direction == Intersectable_1.ExtrudeDirection.TOP && player.vy >= 0) {
+                    this.extrude(player, Intersectable_1.ExtrudeDirection.TOP);
+                }
+            });
+            let platform = new AnimatableCanvas_1.StaticCanvasElement(GAME_WIDTH / 2, GAME_HEIGHT - 20, GAME_WIDTH * 0.25, 5, function (ctx) {
+                ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
+            }, 0, 0, function (elements) {
+                let player = elements.dynamic["player"];
+                let direction = Intersectable_1.enters(this, player);
+                if (direction == Intersectable_1.ExtrudeDirection.TOP && player.vy >= 0) {
+                    this.extrude(player, Intersectable_1.ExtrudeDirection.TOP);
+                }
+            });
+            window.addEventListener("keydown", function (event) {
+                switch (event.keyCode) {
+                    case UP_KEYCODE:
+                        if (player.bounded(Intersectable_1.ExtrudeDirection.BOTTOM)) {
+                            player.vy = -10;
+                            player.vy = Math.min(player.vy, -1 * Race.MAX_SPEED);
+                        }
+                        break;
+                    case RIGHT_KEYCODE:
+                        if (player.bounded(Intersectable_1.ExtrudeDirection.BOTTOM)) {
+                            player.vx += 1;
+                            player.vx = Math.min(player.vx, Race.MAX_SPEED);
+                        }
+                        break;
+                    case LEFT_KEYCODE:
+                        if (player.bounded(Intersectable_1.ExtrudeDirection.BOTTOM)) {
+                            player.vx -= 1;
+                            player.vx = Math.max(player.vx, -1 * Race.MAX_SPEED);
+                        }
+                        break;
+                }
+            });
+            this.withAttribute("width", GAME_HEIGHT)
+                .withAttribute("height", GAME_WIDTH)
+                .withElement(ground, "ground", 1)
+                .withElement(platform, "platform", 1)
+                .withElement(player, "player", 0)
+                .reinit();
         }
-        lines() {
-            return this._lines;
-        }
-        dynamicPoints() {
-            return this._points;
-        }
-        extrude(direction) {
-            switch (direction) {
-                case Intersectable_1.ExtrudeDirection.LEFT:
-                case Intersectable_1.ExtrudeDirection.TOP:
-                    return { x: this.x.get() - 1, y: this.y.get() - 1 };
-                case Intersectable_1.ExtrudeDirection.RIGHT:
-                    return { x: this.x.get() + this.width.get() + 1, y: this.y.get() - 1 };
-                case Intersectable_1.ExtrudeDirection.BOTTOM:
-                    return { x: this.x.get() + this.width.get() + 1, y: this.y.get() + this.height.get() + 1 };
+        onTic() {
+            super.onTic();
+            for (let element of this.rankedElements) {
+                if (element.bounded(Intersectable_1.ExtrudeDirection.BOTTOM)) {
+                    if (element.vx > Race.EPSILON)
+                        element.ax = Race.FRICTION * -1;
+                    else if (element.vx < -1 * Race.EPSILON)
+                        element.ax = Race.FRICTION;
+                    else {
+                        element.vx = 0;
+                        element.ax = 0;
+                    }
+                }
             }
         }
     }
-    // init the Player in the lower left corner
-    let playerModel = new PlayerModel(0, 390, 10, 10, 1, 2);
-    let otherPlayerModel = new PlayerModel(100, 380, 21, 21, 1, 2);
-    playerModel.onEnters(otherPlayerModel, function (extrudeDirection) {
-        console.log("bidi!", Intersectable_1.ExtrudeDirection[extrudeDirection]);
-        let extrudePosition = otherPlayerModel.extrude(extrudeDirection);
-        switch (extrudeDirection) {
-            case Intersectable_1.ExtrudeDirection.LEFT:
-                playerModel.x.set(extrudePosition.x - playerModel.width.get());
-                break;
-            case Intersectable_1.ExtrudeDirection.RIGHT:
-                playerModel.x.set(extrudePosition.x);
-                break;
-            case Intersectable_1.ExtrudeDirection.TOP:
-                playerModel.y.set(extrudePosition.y - playerModel.height.get());
-                break;
-            case Intersectable_1.ExtrudeDirection.BOTTOM:
-                playerModel.y.set(extrudePosition.y);
-                break;
-        }
-        return true;
-    });
-    new CanvasComponent_1.CanvasComponent(document.getElementById("app-root"))
-        .withAttribute("width", GAME_HEIGHT)
-        .withAttribute("height", GAME_WIDTH)
-        .withDrawFunction(playerModel)
-        .withDrawFunction(otherPlayerModel)
-        .reinit();
-    window.addEventListener("keydown", function (event) {
-        switch (event.keyCode) {
-            case UP_KEYCODE:
-                playerModel.jump(25);
-                break;
-            case RIGHT_KEYCODE:
-                playerModel.right();
-                break;
-            case LEFT_KEYCODE:
-                playerModel.left();
-                break;
-        }
-    });
-    window["playerModel"] = playerModel;
+    Race.MAX_SPEED = 4;
+    Race.FRICTION = 0.1;
+    Race.EPSILON = 0.1;
+    window["Race"] = new Race();
 });
 
-},{"../CanvasComponent":4,"../FunctionalComponent":6,"../Intersectable":7,"../ModelElement":10,"./Moveable":11}]},{},[12]);
+},{"../AnimatableCanvas":3,"../Intersectable":6}]},{},[11]);

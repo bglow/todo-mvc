@@ -1,8 +1,8 @@
-import {CanvasComponent} from "../CanvasComponent";
-import ModelElement from "../ModelElement";
-import {MoveableModel} from "./Moveable";
-import {StaticLine, ExtrudeDirection, DynamicPoint, Extrudable} from "../Intersectable";
-import {FunctionalElement} from "../FunctionalComponent";
+import {
+    AnimatableCanvas, CanvasElement, CanvasCollection, StaticCanvasElement,
+    DynamicCanvasElement
+} from "../AnimatableCanvas";
+import {enters, ExtrudeDirection, Line, Intersectable} from "../Intersectable";
 
 const LEFT_KEYCODE = 37;
 const UP_KEYCODE = 38;
@@ -11,122 +11,89 @@ const DOWN_KEYCODE = 40;
 const GAME_HEIGHT = 400;
 const GAME_WIDTH = 400;
 
-class PlayerModel extends MoveableModel implements Extrudable {
-    readonly width: ModelElement<number>;
-    readonly height: ModelElement<number>;
-    protected _lines: StaticLine[];
-    protected _points: DynamicPoint[];
+class Race extends AnimatableCanvas {
 
-    constructor(initX: number, initY: number, width: number, height: number, gravity?: number, friction? : number) {
-        super(initX, initY, gravity, friction, function (this: CanvasRenderingContext2D, x: number, y: number, width: number, height: number) {
-            let ctx = this as CanvasRenderingContext2D;
-            ctx.strokeRect(0, 0, width, height);
+    protected static MAX_SPEED = 4;
+    protected static FRICTION = 0.1;
+    protected static EPSILON = 0.1;
+
+    constructor() {
+        super(document.getElementById("app-root"));
+
+        let player = new DynamicCanvasElement(0, 390, 10, 10, function (this: CanvasElement, ctx: CanvasRenderingContext2D): void {
+            ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
         });
-        this.width = new ModelElement<number>(width);
-        this.height = new ModelElement<number>(height);
-        this.listenedTo.push(this.x, this.y, this.width, this.height);
-        let pNW = new DynamicPoint(
-            new FunctionalElement((x: number): number => {
-                return x;
-            }, this.x),
-            new FunctionalElement((y: number): number => {
-                return y;
-            }, this.y)
-        );
-        let pSE = new DynamicPoint(
-            new FunctionalElement((x: number, width: number): number => {
-                return x + width;
-            }, this.x, this.width),
-            new FunctionalElement((y: number, height: number): number => {
-                return y + height;
-            }, this.y, this.height)
-        );
-        let pSW = new DynamicPoint(
-            new FunctionalElement((x: number): number => {
-                return x;
-            }, this.x),
-            new FunctionalElement((y: number, height: number): number => {
-                return y + height;
-            }, this.y, this.height)
-        );
-        let pNE = new DynamicPoint(
-            new FunctionalElement((x: number, width: number): number => {
-                return x + width;
-            }, this.x, this.width),
-            new FunctionalElement((y: number): number => {
-                return y;
-            }, this.y)
-        );
-        this._points = [pNW,pSE,pSW,pNE];
-        this._lines = [new StaticLine(pNW,pSE), new StaticLine(pSW,pNE)];
-        this.postConstruct();
+        player.ay = 1;
+
+        let ground = new StaticCanvasElement(0, GAME_HEIGHT, GAME_WIDTH, 1, function (this: CanvasElement, ctx: CanvasRenderingContext2D): void {
+            ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
+        }, 0, 0, function (this: StaticCanvasElement, elements: CanvasCollection) {
+            let player = elements.dynamic["player"];
+            let direction = enters(this as Intersectable, player as Line) as ExtrudeDirection;
+            if (direction == ExtrudeDirection.TOP && player.vy >= 0) {
+                this.extrude(player, ExtrudeDirection.TOP);
+            }
+        });
+
+        let platform = new StaticCanvasElement(GAME_WIDTH / 2, GAME_HEIGHT - 20, GAME_WIDTH * 0.25, 5, function (this: CanvasElement, ctx: CanvasRenderingContext2D): void {
+            ctx.strokeRect(this.x.get(), this.y.get(), this.w.get(), this.h.get());
+        }, 0, 0, function (this: StaticCanvasElement, elements: CanvasCollection) {
+            let player = elements.dynamic["player"];
+            let direction = enters(this, player as Line) as ExtrudeDirection;
+            if (direction == ExtrudeDirection.TOP && player.vy >= 0) {
+                this.extrude(player, ExtrudeDirection.TOP);
+            }
+        });
+
+        window.addEventListener("keydown",function (event: KeyboardEvent) {
+            switch (event.keyCode) {
+                case UP_KEYCODE:
+                    if (player.bounded(ExtrudeDirection.BOTTOM)) {
+                        player.vy = -10;
+                        player.vy = Math.min(player.vy, -1 * Race.MAX_SPEED);
+                    }
+                    break;
+                case RIGHT_KEYCODE:
+                    if (player.bounded(ExtrudeDirection.BOTTOM)) {
+                        player.vx += 1;
+                        player.vx = Math.min(player.vx, Race.MAX_SPEED);
+                    }
+                    break;
+                case LEFT_KEYCODE:
+                    if (player.bounded(ExtrudeDirection.BOTTOM)) {
+                        player.vx -= 1;
+                        player.vx = Math.max(player.vx, -1 * Race.MAX_SPEED);
+                    }
+                    break;
+            }
+        });
+
+        this.withAttribute("width", GAME_HEIGHT)
+            .withAttribute("height", GAME_WIDTH)
+            .withElement(ground, "ground", 1)
+            .withElement(platform, "platform", 1)
+            .withElement(player, "player", 0)
+            .reinit();
     }
 
-    lines(): StaticLine[] {
-        return this._lines;
-    }
-
-    dynamicPoints(): DynamicPoint[] {
-        return this._points;
-    }
-
-    extrude(direction: ExtrudeDirection): {x: number; y: number} {
-        switch (direction) {
-            case ExtrudeDirection.LEFT:
-            case ExtrudeDirection.TOP:
-                return { x: this.x.get() - 1, y: this.y.get() - 1 };
-            case ExtrudeDirection.RIGHT:
-                return { x: this.x.get() + this.width.get() + 1, y: this.y.get() - 1 };
-            case ExtrudeDirection.BOTTOM:
-                return { x: this.x.get() + this.width.get() + 1, y: this.y.get() + this.height.get() + 1 };
+    protected onTic(): void {
+        super.onTic();
+        for (let element of this.rankedElements) {
+            if (element.bounded(ExtrudeDirection.BOTTOM)) {
+                if (element.vx > Race.EPSILON)
+                    element.ax = Race.FRICTION * -1;
+                else if (element.vx < -1 * Race.EPSILON)
+                    element.ax = Race.FRICTION;
+                else {
+                    element.vx = 0;
+                    element.ax = 0;
+                }
+            }
         }
     }
 }
 
-// init the Player in the lower left corner
-let playerModel = new PlayerModel(0, 390, 10, 10, 1, 2);
-let otherPlayerModel = new PlayerModel(100, 380, 21, 21, 1, 2);
-playerModel.onEnters(otherPlayerModel, function (extrudeDirection: ExtrudeDirection) {
-    console.log("bidi!",ExtrudeDirection[extrudeDirection]);
-    let extrudePosition = otherPlayerModel.extrude(extrudeDirection);
-    switch (extrudeDirection) {
-        case ExtrudeDirection.LEFT:
-            playerModel.x.set(extrudePosition.x - playerModel.width.get());
-            break;
-        case ExtrudeDirection.RIGHT:
-            playerModel.x.set(extrudePosition.x);
-            break;
-        case ExtrudeDirection.TOP:
-            playerModel.y.set(extrudePosition.y - playerModel.height.get());
-            break;
-        case ExtrudeDirection.BOTTOM:
-            playerModel.y.set(extrudePosition.y);
-            break;
-    }
+window["Race"] = new Race();
 
-    return true;
-});
 
-new CanvasComponent(document.getElementById("app-root"))
-    .withAttribute("width", GAME_HEIGHT)
-    .withAttribute("height", GAME_WIDTH)
-    .withDrawFunction(playerModel)
-    .withDrawFunction(otherPlayerModel)
-    .reinit();
-
-window.addEventListener("keydown",function (event: KeyboardEvent) {
-    switch (event.keyCode) {
-        case UP_KEYCODE:
-            playerModel.jump(25);
-            break;
-        case RIGHT_KEYCODE:
-            playerModel.right();
-            break;
-        case LEFT_KEYCODE:
-            playerModel.left();
-            break;
-    }
-});
-
-window["playerModel"] = playerModel;
 
