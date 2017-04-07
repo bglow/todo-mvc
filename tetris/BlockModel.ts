@@ -1,4 +1,4 @@
-import ModelElement from "../ModelElement";
+import ModelElement from "../src/ModelElement";
 export class BlockModel extends ModelElement<any> {
 
     static SIDE_LENGTH = 25;

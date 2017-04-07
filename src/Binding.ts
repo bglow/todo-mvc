@@ -5,7 +5,7 @@ import {AbstractComponent} from "./AbstractComponent";
 import ModelArray from "./ModelArray";
 import {AbstractElement} from "./AbstractElement";
 
-export type UpdateCallback<I,O> = (newValue: I) => O;
+export type UpdateCallback<I,O> = (newValue: I, key?: string | number) => O;
 
 export class Binding<I,O> {
 

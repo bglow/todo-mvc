@@ -1,4 +1,4 @@
-import SVGComponent from "../SVGComponent";
+import SVGComponent from "../src/SVGComponent";
 import {Piece} from "./Piece";
 import {PieceModel} from "./PieceModel";
 import {BlockModel} from "./BlockModel";
@@ -8,11 +8,11 @@ import {SPieceBlockModel} from "./SPieceModel";
 import {ZPieceBlockModel} from "./ZPieceBlockModel";
 import {LPieceModel} from "./LPieceModel";
 import {LongPieceModel} from "./LongPieceModel";
-import Component from "../Component";
-import ModelElement from "../ModelElement";
-import {Binding} from "../Binding";
+import Component from "../src/Component";
+import ModelElement from "../src/ModelElement";
+import {Binding} from "../src/Binding";
 import {PyramdPieceModel} from "./PyramdPieceModel";
-import {FunctionalElement} from "../FunctionalComponent";
+import {FunctionalElement} from "../src/FunctionalComponent";
 
 const LEFT_KEYCODE = 37;
 const UP_KEYCODE = 38;

@@ -1,6 +1,7 @@
 import {UpdateCallback} from "./Binding";
 import {AbstractComponent} from "./AbstractComponent";
 import {AbstractElement} from "./AbstractElement";
+import RemoteStream from "./RemoteStream";
 
 export default class ModelElement<V> extends AbstractElement<V> {
     protected data: V;
@@ -22,4 +23,7 @@ export default class ModelElement<V> extends AbstractElement<V> {
             this.doUpdate();
     }
 
+    subscribe(remoteStream: RemoteStream): void {
+        throw "Not Implemented";
+    }
 }

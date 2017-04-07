@@ -1,18 +1,22 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./Binding", "./ModelElement"], factory);
     }
-})(["require", "exports", "./Binding", "./ModelElement"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
     const Binding_1 = require("./Binding");
     const ModelElement_1 = require("./ModelElement");
     class AbstractComponent {
-        constructor(tagName, parent) {
-            this.element = document.createElement(tagName || "div");
+        constructor(tagName, parent, namespace) {
+            if (!namespace)
+                this.element = document.createElement(tagName || "div");
+            else
+                this.element = document.createElementNS(namespace, tagName);
             if (parent != undefined) {
                 this.parent = parent;
                 parent.appendChild(this.element);
@@ -128,6 +132,7 @@
             this.updateText();
             return this;
         }
+        // value should be bound with a two way binding
         withValue(value) {
             this.value = value;
             let valueProp;
@@ -149,14 +154,6 @@
                 this.element.onchange = function () {
                     setInputType.call(this);
                     binding.model.set(binding.onUserUpdate(this.element[valueProp]));
-                }.bind(this);
-            }
-            else if (this.value instanceof Binding_1.Binding) {
-                let binding = value;
-                binding.model.registerCallback(this, this.updateValue.bind(this));
-                this.element.onchange = function () {
-                    setInputType.call(this);
-                    binding.model.set(this.element[valueProp]);
                 }.bind(this);
             }
             return this;
@@ -262,15 +259,73 @@
     exports.AbstractComponent = AbstractComponent;
 });
 
-},{"./Binding":2,"./ModelElement":7}],2:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./Binding":3,"./ModelElement":8}],2:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
     }
-})(["require", "exports", "./ModelElement", "./ModelArray"], function (require, exports) {
+})(function (require, exports) {
+    "use strict";
+    class AbstractElement {
+        destroy() {
+            if (!this.boundComponents)
+                return;
+            for (let component of this.boundComponents.values())
+                component.destroy();
+        }
+        bindComponent(component) {
+            if (!this.boundComponents) {
+                this.boundComponents = new Set();
+            }
+            this.boundComponents.add(component);
+        }
+        registerCallback(component, updateCallback) {
+            if (!this.updateCallbacks)
+                this.updateCallbacks = new Map();
+            let callbackSet = this.updateCallbacks.get(component);
+            if (callbackSet == undefined) {
+                callbackSet = new Set();
+                this.updateCallbacks.set(component, callbackSet);
+            }
+            callbackSet.add(updateCallback);
+        }
+        unregisterCallback(component, callback) {
+            if (!this.updateCallbacks)
+                return;
+            if (!callback)
+                this.updateCallbacks.delete(component);
+            else if (this.updateCallbacks.has(component)) {
+                let set = this.updateCallbacks.get(component);
+                if (set)
+                    set.delete(callback);
+            }
+        }
+        doUpdate() {
+            if (!this.updateCallbacks)
+                return;
+            for (let callbackSet of this.updateCallbacks.values()) {
+                for (let callback of callbackSet.values())
+                    callback(this.get());
+            }
+        }
+    }
+    exports.AbstractElement = AbstractElement;
+});
+
+},{}],3:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./ModelElement", "./ModelArray"], factory);
+    }
+})(function (require, exports) {
     "use strict";
     const ModelElement_1 = require("./ModelElement");
     const ModelArray_1 = require("./ModelArray");
@@ -352,21 +407,24 @@
     exports.persist = persist;
 });
 
-},{"./ModelArray":5,"./ModelElement":7}],3:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./ModelArray":6,"./ModelElement":8}],4:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./AbstractComponent", "./ModelArray"], factory);
     }
-})(["require", "exports", "./AbstractComponent"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
     const AbstractComponent_1 = require("./AbstractComponent");
+    const ModelArray_1 = require("./ModelArray");
     class Collection extends AbstractComponent_1.AbstractComponent {
         children(model, onAddCallback) {
             model.registerAddCallback(this, function (newItem) {
-                let newComponent = onAddCallback(newItem);
+                let i = model instanceof ModelArray_1.default ? model.size.get() : "";
+                let newComponent = onAddCallback(newItem, i);
                 newItem.bindComponent(newComponent);
                 this.element.appendChild(newComponent.getElement());
             }.bind(this));
@@ -377,19 +435,25 @@
     exports.default = Collection;
 });
 
-},{"./AbstractComponent":1}],4:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./AbstractComponent":1,"./ModelArray":6}],5:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./AbstractComponent"], factory);
     }
-})(["require", "exports", "./AbstractComponent"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
     const AbstractComponent_1 = require("./AbstractComponent");
     class Component extends AbstractComponent_1.AbstractComponent {
-        child(...components) {
+        child(x) {
+            let components;
+            if (x instanceof Array)
+                components = x;
+            else
+                components = Array.prototype.slice.call(arguments);
             for (let component of components) {
                 component.setParent(this);
                 this.element.appendChild(component.getElement());
@@ -401,15 +465,16 @@
     exports.default = Component;
 });
 
-},{"./AbstractComponent":1}],5:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./AbstractComponent":1}],6:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./ModelCollection", "./ModelElement"], factory);
     }
-})(["require", "exports", "./ModelCollection", "./ModelElement"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
     const ModelCollection_1 = require("./ModelCollection");
     const ModelElement_1 = require("./ModelElement");
@@ -428,9 +493,10 @@
                 this.addCallbacks = new Map();
             let newMember = new ModelElement_1.default(member);
             this.data.push(newMember);
+            const index = this.data.length - 1;
             for (let callbackSet of this.addCallbacks.values()) {
                 for (let callback of callbackSet.values()) {
-                    callback(newMember);
+                    callback(newMember, index);
                 }
             }
             this.size.set(this.size.get() + 1);
@@ -445,20 +511,26 @@
             this.size.set(this.size.get() - 1);
             return this;
         }
+        clear() {
+            while (this.data.length > 0)
+                this.remove(this.data[0]);
+            return this;
+        }
     }
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = ModelArray;
 });
 
-},{"./ModelCollection":6,"./ModelElement":7}],6:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./ModelCollection":7,"./ModelElement":8}],7:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./ModelElement"], factory);
     }
-})(["require", "exports", "./ModelElement"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
     const ModelElement_1 = require("./ModelElement");
     class ModelCollection extends ModelElement_1.default {
@@ -487,18 +559,21 @@
     exports.ModelCollection = ModelCollection;
 });
 
-},{"./ModelElement":7}],7:[function(require,module,exports){
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./ModelElement":8}],8:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./AbstractElement"], factory);
     }
-})(["require", "exports"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
-    class ModelElement {
+    const AbstractElement_1 = require("./AbstractElement");
+    class ModelElement extends AbstractElement_1.AbstractElement {
         constructor(data) {
+            super();
             this.data = data;
         }
         get() {
@@ -509,237 +584,196 @@
             if (doUpdate)
                 this.doUpdate();
         }
-        destroy() {
-            for (let component of this.boundComponents.values())
-                component.destroy();
-        }
-        doUpdate() {
-            if (!this.updateCallbacks)
-                return;
-            for (let callbackSet of this.updateCallbacks.values()) {
-                for (let callback of callbackSet.values())
-                    callback(this.data);
-            }
-        }
-        bindComponent(component) {
-            if (!this.boundComponents) {
-                this.boundComponents = new Set();
-            }
-            this.boundComponents.add(component);
-        }
-        registerCallback(component, updateCallback) {
-            if (!this.updateCallbacks)
-                this.updateCallbacks = new Map();
-            let callbackSet = this.updateCallbacks.get(component);
-            if (callbackSet == undefined) {
-                callbackSet = new Set();
-                this.updateCallbacks.set(component, callbackSet);
-            }
-            callbackSet.add(updateCallback);
-        }
-        unregisterCallback(component, callback) {
-            if (!this.updateCallbacks)
-                return;
-            if (!callback)
-                this.updateCallbacks.delete(component);
-            else if (this.updateCallbacks.has(component)) {
-                let set = this.updateCallbacks.get(component);
-                if (set)
-                    set.delete(callback);
-            }
-        }
     }
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = ModelElement;
 });
 
-},{}],8:[function(require,module,exports){
-var __decorate = (this && this.__decorate) || function (decorators, target, key, desc) {
-    var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
-    if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);
-    else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
-    return c > 3 && r && Object.defineProperty(target, key, r), r;
-};
-(function (dependencies, factory) {
-    if (typeof module === 'object' && typeof module.exports === 'object') {
-        var v = factory(require, exports); if (v !== undefined) module.exports = v;
+},{"./AbstractElement":2}],9:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
     }
-    else if (typeof define === 'function' && define.amd) {
-        define(dependencies, factory);
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./Collection", "./ModelElement"], factory);
     }
-})(["require", "exports", "../Component", "../ModelElement", "../ModelArray", "../Collection", "../Binding"], function (require, exports) {
+})(function (require, exports) {
     "use strict";
-    // test application implementing todo.mvc requirements
-    const Component_1 = require("../Component");
-    const ModelElement_1 = require("../ModelElement");
-    const ModelArray_1 = require("../ModelArray");
-    const Collection_1 = require("../Collection");
-    const Binding_1 = require("../Binding");
-    const ENTER_KEY_CODE = 13;
-    var TodoState;
-    (function (TodoState) {
-        TodoState[TodoState["ACTIVE"] = 0] = "ACTIVE";
-        TodoState[TodoState["COMPLETED"] = 1] = "COMPLETED";
-    })(TodoState || (TodoState = {}));
-    var TodoFilter;
-    (function (TodoFilter) {
-        TodoFilter[TodoFilter["ALL"] = 0] = "ALL";
-        TodoFilter[TodoFilter["ACTIVE"] = 1] = "ACTIVE";
-        TodoFilter[TodoFilter["COMPLETED"] = 2] = "COMPLETED";
-    })(TodoFilter || (TodoFilter = {}));
-    let Todo = class Todo {
-        constructor(description, state = TodoState.ACTIVE) {
-            this.editing = new ModelElement_1.default(false);
-            this.description = new ModelElement_1.default(description);
-            this.state = new ModelElement_1.default(state);
+    const Collection_1 = require("./Collection");
+    const ModelElement_1 = require("./ModelElement");
+    class SVGCollection extends Collection_1.default {
+        constructor(tagName, parent) {
+            super(tagName, parent, "http://www.w3.org/2000/svg");
         }
-    };
-    Todo = __decorate([
-        Binding_1.persist
-    ], Todo);
-    let TodoModel = class TodoModel {
-        constructor(title = "todos", initialFilter = TodoFilter.ALL) {
-            this.title = new ModelElement_1.default(title);
-            this.todos = new ModelArray_1.default();
-            this.filter = new ModelElement_1.default(initialFilter);
-        }
-        serialize() {
-            let plainObject = {
-                todos: function () {
-                    let plainTodos = [];
-                    for (let todo of this.todos.get()) {
-                        plainTodos.push({
-                            description: todo.get().description.get(),
-                            state: todo.get().state.get()
-                        });
-                    }
-                    return plainTodos;
-                }.bind(this)(),
-                filter: this.filter.get()
-            };
-            return JSON.stringify(plainObject);
-        }
-        deserialize(todoModel, serialized) {
-            let plainObject = JSON.parse(serialized);
-            setTimeout(function () {
-                todoModel.filter.set(plainObject["filter"]);
-                for (let plainTodo of plainObject["todos"]) {
-                    todoModel.todos.add(new Todo(plainTodo["description"], plainTodo["state"]));
+        /**
+         * Override AbstractComponent here
+         * SVGElement.classname is readonly
+         * Will cause an error in browser
+         * So override to set the class attribute instead
+         */
+        updateClass() {
+            if (!this.classes)
+                return;
+            let classNames = [];
+            for (let cp of this.classes.values()) {
+                if (typeof cp == "string") {
+                    classNames.push(cp);
                 }
-            }, 100);
-            return todoModel;
+                else if (cp instanceof ModelElement_1.default) {
+                    classNames.push(cp.get());
+                }
+                else {
+                    let binding = cp;
+                    classNames.push(binding.onupdate(binding.model.get()));
+                }
+            }
+            // this is the line that is modified from base class
+            this.element.setAttribute("class", classNames.join(" "));
         }
-    };
-    TodoModel = __decorate([
-        Binding_1.persistentModel
-    ], TodoModel);
-    const model = new TodoModel();
-    class FilterHandle extends Component_1.default {
-        constructor(label, filter) {
-            super("li");
-            this.child(new Component_1.default("a")
-                .withText(label)
-                .withClass(new Binding_1.Binding(model.filter, function (currentFilter) {
-                return currentFilter == filter ? "selected" : "";
-            }))
-                .on("click", function () {
-                model.filter.set(filter);
-            })
-                .reinit()).reinit();
+        withWidth(width) {
+            return this.withAttribute("width", width);
+        }
+        withHeight(height) {
+            return this.withAttribute("height", height);
+        }
+        withX(x) {
+            return this.withAttribute("x", x);
+        }
+        withY(y) {
+            return this.withAttribute("y", y);
         }
     }
-    new Component_1.default("section", document.getElementById("app-root"))
-        .withClass("todoapp")
-        .child(new Component_1.default("header")
-        .withClass("header")
-        .child(new Component_1.default("h1")
-        .withText(model.title)
-        .reinit(), new Component_1.default("input")
-        .withClass("new-todo")
-        .withAttribute("type", "text")
-        .withAttribute("placeholder", "What needs to be done?")
-        .on("keyup", function (event) {
-        if (event.keyCode === ENTER_KEY_CODE) {
-            let input = event.currentTarget;
-            model.todos.add(new Todo(input.value));
-            input.value = "";
-        }
-    })
-        .reinit(), new Component_1.default("section")
-        .withClass("main")
-        .child(new Component_1.default("input")
-        .withAttribute("type", "checkbox")
-        .withClass("toggle-all")
-        .on("click", function (event) {
-        let state = event.currentTarget.checked ? TodoState.COMPLETED : TodoState.ACTIVE;
-        for (let todo of model.todos.get())
-            todo.get().state.set(state);
-    })
-        .reinit()).reinit(), new Collection_1.default("ul")
-        .withClass("todo-list")
-        .children(model.todos, function (todo) {
-        let label = new Component_1.default("label")
-            .withText(todo.get().description)
-            .on("click", function () {
-            todo.get().editing.set(true);
-            input.focus();
-            this.hide();
-        })
-            .reinit();
-        let input = new Component_1.default("input")
-            .withAttribute("type", "text")
-            .withClass(new Binding_1.Binding(todo.get().editing, function (nowEditing) {
-            return nowEditing ? "edit" : "edit hidden";
-        }))
-            .withValue(todo.get().description)
-            .on("focusout", function (event) {
-            this.hide();
-            todo.get().editing.set(false);
-            let newDescription = event.currentTarget.value;
-            todo.get().description.set(newDescription);
-            label.show();
-        })
-            .reinit();
-        function getTodoCssClass() {
-            let todoState = todo.get().state.get();
-            let editing = todo.get().editing.get();
-            let filter = model.filter.get();
-            return "todo " + ((filter == TodoFilter.ALL
-                || (filter == TodoFilter.ACTIVE && todoState == TodoState.ACTIVE)
-                || (filter == TodoFilter.COMPLETED) && todoState == TodoState.COMPLETED)
-                ? ((todoState == TodoState.COMPLETED ? "completed " : "") + (editing ? "editing " : "")) : "hidden");
-        }
-        return new Component_1.default("li")
-            .withClass(new Binding_1.Binding(todo.get().state, getTodoCssClass), new Binding_1.Binding(model.filter, getTodoCssClass), new Binding_1.Binding(todo.get().editing, getTodoCssClass))
-            .child(new Component_1.default("input")
-            .withAttribute("type", "checkbox")
-            .withClass("toggle")
-            .withValue(new Binding_1.TwoWayBinding(todo.get().state, function (newState) {
-            return newState == TodoState.COMPLETED;
-        }, function (isChecked) {
-            return isChecked ? TodoState.COMPLETED : TodoState.ACTIVE;
-        }))
-            .reinit(), label, input, new Component_1.default("button")
-            .withClass("destroy")
-            .on("click", function () {
-            model.todos.remove(todo);
-        })
-            .reinit())
-            .reinit();
-    }).reinit()).reinit(), new Component_1.default("footer")
-        .withClass("footer", new Binding_1.Binding(model.todos.size, function (currentSize) {
-        return currentSize == 0 ? "hidden" : "";
-    }))
-        .child(new Component_1.default("span")
-        .withClass("todo-count")
-        .withText(new Binding_1.Binding(model.todos.size, function (newSize) {
-        return newSize + " items left";
-    }))
-        .reinit(), new Component_1.default("ul")
-        .withClass("filters")
-        .child(new FilterHandle("All", TodoFilter.ALL), new FilterHandle("Active", TodoFilter.ACTIVE), new FilterHandle("Completed", TodoFilter.COMPLETED)).reinit()).reinit()).reinit();
-    // uncomment to allow global inspection of model state
-    window["model"] = model;
+    exports.SVGCollection = SVGCollection;
 });
 
-},{"../Binding":2,"../Collection":3,"../Component":4,"../ModelArray":5,"../ModelElement":7}]},{},[8]);
+},{"./Collection":4,"./ModelElement":8}],10:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "./Component", "./ModelElement"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    const Component_1 = require("./Component");
+    const ModelElement_1 = require("./ModelElement");
+    class SVGComponent extends Component_1.default {
+        constructor(tagName, parent) {
+            super(tagName, parent, "http://www.w3.org/2000/svg");
+        }
+        /**
+         * Override AbstractComponent here
+         * SVGElement.classname is readonly
+         * Will cause an error in browser
+         * So override to set the class attribute instead
+         */
+        updateClass() {
+            if (!this.classes)
+                return;
+            let classNames = [];
+            for (let cp of this.classes.values()) {
+                if (typeof cp == "string") {
+                    classNames.push(cp);
+                }
+                else if (cp instanceof ModelElement_1.default) {
+                    classNames.push(cp.get());
+                }
+                else {
+                    let binding = cp;
+                    classNames.push(binding.onupdate(binding.model.get()));
+                }
+            }
+            // this is the line that is modified from base class
+            this.element.setAttribute("class", classNames.join(" "));
+        }
+        withWidth(width) {
+            return this.withAttribute("width", width);
+        }
+        withHeight(height) {
+            return this.withAttribute("height", height);
+        }
+        withX(x) {
+            return this.withAttribute("x", x);
+        }
+        withY(y) {
+            return this.withAttribute("y", y);
+        }
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.default = SVGComponent;
+});
+
+},{"./Component":5,"./ModelElement":8}],11:[function(require,module,exports){
+(function (factory) {
+    if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(require, exports);
+        if (v !== undefined) module.exports = v;
+    }
+    else if (typeof define === "function" && define.amd) {
+        define(["require", "exports", "../SVGComponent", "../ModelElement", "../ModelArray", "../SVGCollection"], factory);
+    }
+})(function (require, exports) {
+    "use strict";
+    const SVGComponent_1 = require("../SVGComponent");
+    const ModelElement_1 = require("../ModelElement");
+    const ModelArray_1 = require("../ModelArray");
+    const SVGCollection_1 = require("../SVGCollection");
+    class ChartDataPoint {
+        constructor(y) {
+            this.y = new ModelElement_1.default(y);
+        }
+    }
+    exports.ChartDataPoint = ChartDataPoint;
+    class LabeledChartDataPoint extends ChartDataPoint {
+    }
+    exports.LabeledChartDataPoint = LabeledChartDataPoint;
+    class ChartAxis extends SVGComponent_1.default {
+    }
+    exports.ChartAxis = ChartAxis;
+    class ChartModel {
+        constructor(width, height, data) {
+            this.width = new ModelElement_1.default(width);
+            this.height = new ModelElement_1.default(height);
+            this.data = new ModelArray_1.default(data || []);
+        }
+        reload(data) {
+        }
+    }
+    exports.ChartModel = ChartModel;
+    class ChartComponent extends SVGComponent_1.default {
+        constructor(parent) {
+            super("svg", parent);
+        }
+    }
+    exports.ChartComponent = ChartComponent;
+    const model = new ChartModel(300, 200);
+    new ChartComponent(document.getElementById("app-root"))
+        .withWidth(model.width)
+        .withHeight(model.height)
+        .withClass('chart')
+        .child(new SVGComponent_1.default("rect")
+        .withWidth(model.width)
+        .withHeight(model.height)
+        .withClass('perimeter')
+        .reinit(), new SVGCollection_1.SVGCollection("g")
+        .children(model.data, function (entry, i) {
+        return new SVGComponent_1.default("rect")
+            .withX(i * 7)
+            .withHeight(entry.get().y)
+            .withWidth(5)
+            .withClass("bar")
+            .reinit();
+    })
+        .reinit()).reinit();
+    window["model"] = model;
+    model.data.add(new ChartDataPoint(10));
+    model.data.add(new ChartDataPoint(12));
+    model.data.add(new ChartDataPoint(14));
+    model.data.add(new ChartDataPoint(18));
+    window["ChartDataPoint"] = ChartDataPoint;
+});
+
+},{"../ModelArray":6,"../ModelElement":8,"../SVGCollection":9,"../SVGComponent":10}]},{},[11]);

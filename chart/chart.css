@@ -1,0 +1,8 @@
+.chart .perimeter {
+    stroke: #efefef;
+    stroke-width: 2px;
+    fill: white;
+}
+.chart .bar {
+    fill: #00bbbb;
+}

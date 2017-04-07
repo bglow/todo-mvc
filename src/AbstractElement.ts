@@ -1,11 +1,14 @@
 import {AbstractComponent} from "./AbstractComponent";
 import {UpdateCallback} from "./Binding";
+import RemoteStream from "./RemoteStream";
 
 export abstract class AbstractElement<V> {
     protected updateCallbacks: Map<any, Set<UpdateCallback<V,any>>>;
     protected boundComponents: Set<AbstractComponent>;
 
     abstract get(): V;
+
+    abstract subscribe(remoteStream: RemoteStream): void;
 
     destroy(): void {
         if (!this.boundComponents)

@@ -1,4 +1,0 @@
-#!/bin/sh
-
-tsc --module umd --target es6 --experimentalDecorators ./_all.ts
-browserify ./tetris.js -o ./tetris.bundled.js

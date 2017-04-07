@@ -1,4 +1,4 @@
-import SVGComponent from "../SVGComponent";
+import SVGComponent from "../src/SVGComponent";
 import {PieceModel} from "./PieceModel";
 import {BlockModel} from "./BlockModel";
 export class Piece {

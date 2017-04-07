@@ -1,5 +1,0 @@
-#!/bin/sh
-
-tsc --module umd --target es6 --experimentalDecorators ./src/_all.ts
-browserify ./src/*.js -o mvc.bundled.js
-browserify ./src/test/todo.js -o ./src/test/todo.bundled.js

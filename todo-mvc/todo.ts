@@ -1,9 +1,9 @@
 // test application implementing todo.mvc requirements
-import Component from "../Component";
-import ModelElement from "../ModelElement";
-import ModelArray from "../ModelArray";
-import Collection from "../Collection";
-import {Binding, TwoWayBinding, persistentModel, persist, Serializable, Persistence} from "../Binding";
+import Component from "../src/Component";
+import ModelElement from "../src/ModelElement";
+import ModelArray from "../src/ModelArray";
+import Collection from "../src/Collection";
+import {Binding, TwoWayBinding, persistentModel, persist, Serializable} from "../src/Binding";
 
 const ENTER_KEY_CODE = 13;
 

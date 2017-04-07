@@ -3,6 +3,8 @@ import ModelElement from "./ModelElement";
 import {AbstractComponent} from "./AbstractComponent";
 import {UpdateCallback} from "./Binding";
 import Collection from "./Collection";
+import RemoteStream from "./RemoteStream";
+
 export default class ModelArray<M> extends ModelCollection<M,Array<ModelElement<M>>> {
 
     readonly size = new ModelElement<number>(0);
@@ -22,9 +24,10 @@ export default class ModelArray<M> extends ModelCollection<M,Array<ModelElement<
 
         let newMember = new ModelElement<M>(member);
         this.data.push(newMember);
+        const index = this.data.length - 1;
         for (let callbackSet of this.addCallbacks.values()) {
             for (let callback of callbackSet.values()) {
-                callback(newMember);
+                callback(newMember, index);
             }
         }
         this.size.set(this.size.get() + 1);
@@ -39,5 +42,15 @@ export default class ModelArray<M> extends ModelCollection<M,Array<ModelElement<
         }
         this.size.set(this.size.get() - 1);
         return this;
+    }
+
+    clear(): this {
+        while (this.data.length > 0)
+            this.remove(this.data[0]);
+        return this;
+    }
+
+    subscribe(remoteStream: RemoteStream): void {
+        throw "Not implemented";
     }
 }

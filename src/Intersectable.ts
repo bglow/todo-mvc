@@ -1,5 +1,5 @@
 import {AbstractElement} from "./AbstractElement";
-import {MoveableModel} from "./race/Moveable";
+import {MoveableModel} from "../race/Moveable";
 
 interface Point {
     x(): number

@@ -31,6 +31,7 @@ export type HtmlTagName =
     | "svg"
     | "rect"
     | "canvas"
+    | "g"
     ;
 
 export type HtmlAttributeName =
