@@ -1,4 +1,4 @@
-# todo-mvc
+# taco-bell
 a small client side mv* framework
 
 ### building
