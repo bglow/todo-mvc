@@ -1,8 +1,8 @@
-import ModelElement from "./ModelElement";
+import {ModelElement} from "./ModelElement";
 import {Primitive} from "./Shared";
 import {ModelCollection} from "./ModelCollection";
 import {AbstractComponent} from "./AbstractComponent";
-import ModelArray from "./ModelArray";
+import {ModelArray} from "./ModelArray";
 import {AbstractElement} from "./AbstractElement";
 
 export type UpdateCallback<I,O> = (newValue: I, key?: string | number) => O;

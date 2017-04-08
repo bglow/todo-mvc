@@ -3,7 +3,7 @@ import {Primitive} from "./Shared";
 
 type Method = "GET" | "POST" | "PUT";
 
-export default class RemoteStream {
+export class RemoteStream {
 
     protected subscribers: Array<AbstractElement<any>> = [];
     protected baseURL: string;

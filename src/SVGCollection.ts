@@ -1,7 +1,7 @@
-import Collection from "./Collection";
+import {Collection} from "./Collection";
 import {HtmlTagName} from "./Html";
 import {ComponentProperty, Binding} from "./Binding";
-import ModelElement from "./ModelElement";
+import {ModelElement} from "./ModelElement";
 
 export class SVGCollection extends Collection {
 

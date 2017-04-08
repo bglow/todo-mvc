@@ -1,7 +1,7 @@
 import {HtmlTagName, HtmlAttributeName, EventName} from "./Html";
 import {Primitive} from "./Shared";
 import {ComponentEventHandler, ComponentProperty, Binding, TwoWayBinding} from "./Binding";
-import ModelElement from "./ModelElement";
+import {ModelElement} from "./ModelElement";
 
 export abstract class AbstractComponent {
     protected parent: AbstractComponent | Element;

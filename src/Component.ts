@@ -1,6 +1,6 @@
 import {AbstractComponent} from "./AbstractComponent";
 
-export default class Component extends AbstractComponent {
+export class Component extends AbstractComponent {
     child(components: AbstractComponent[]): this;
     child(...components: AbstractComponent[]): this;
     child(x): this {

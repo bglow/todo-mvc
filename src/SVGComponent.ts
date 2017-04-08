@@ -1,8 +1,8 @@
-import Component from "./Component";
+import {Component} from "./Component";
 import {HtmlTagName} from "./Html";
 import {ComponentProperty, Binding} from "./Binding";
-import ModelElement from "./ModelElement";
-export default class SVGComponent extends Component {
+import {ModelElement} from "./ModelElement";
+export class SVGComponent extends Component {
     constructor(tagName: HtmlTagName, parent?: Element) {
         super(tagName, parent, "http://www.w3.org/2000/svg");
     }

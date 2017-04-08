@@ -1,5 +1,5 @@
-import ModelElement from "./ModelElement";
-import Collection from "./Collection";
+import {ModelElement} from "./ModelElement";
+import {Collection} from "./Collection";
 import {UpdateCallback} from "./Binding";
 import {AbstractComponent} from "./AbstractComponent";
 

@@ -1,9 +1,9 @@
 import {UpdateCallback} from "./Binding";
 import {AbstractComponent} from "./AbstractComponent";
 import {AbstractElement} from "./AbstractElement";
-import RemoteStream from "./RemoteStream";
+import {RemoteStream} from "./RemoteStream";
 
-export default class ModelElement<V> extends AbstractElement<V> {
+export class ModelElement<V> extends AbstractElement<V> {
     protected data: V;
     protected updateCallbacks: Map<AbstractComponent,Set<UpdateCallback<V,any>>>;
     protected boundComponents: Set<AbstractComponent>;

@@ -1,10 +1,10 @@
 import {AbstractComponent} from "./AbstractComponent";
 import {UpdateCallback} from "./Binding";
-import ModelElement from "./ModelElement";
+import {ModelElement} from "./ModelElement";
 import {ModelCollection} from "./ModelCollection";
-import ModelArray from "./ModelArray";
+import {ModelArray} from "./ModelArray";
 
-export default class Collection extends AbstractComponent {
+export class Collection extends AbstractComponent {
 
     children<M>(model: ModelCollection<M,any>, onAddCallback: UpdateCallback<ModelElement<M>,AbstractComponent>): this {
         model.registerAddCallback(this, function (newItem: ModelElement<any>) {

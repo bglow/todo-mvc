@@ -1,6 +1,6 @@
 import {AbstractElement} from "./AbstractElement";
-import ModelElement from "./ModelElement";
-import RemoteStream from "./RemoteStream";
+import {ModelElement} from "./ModelElement";
+import {RemoteStream} from "./RemoteStream";
 
 export class FunctionalElement<V> extends AbstractElement<V> {
 

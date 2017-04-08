@@ -1,28 +1,20 @@
-import {ModelCollection} from "./ModelCollection";
-import {ModelElement} from "./ModelElement";
-import {AbstractComponent} from "./AbstractComponent";
-import {UpdateCallback} from "./Binding";
-import {Collection} from "./Collection";
-import {RemoteStream} from "./RemoteStream";
-
-export class ModelArray<M> extends ModelCollection<M,Array<ModelElement<M>>> {
-
-    readonly size = new ModelElement<number>(0);
-
-    constructor(data?: Array<M>) {
+"use strict";
+const ModelCollection_1 = require("./ModelCollection");
+const ModelElement_1 = require("./ModelElement");
+class ModelArray extends ModelCollection_1.ModelCollection {
+    constructor(data) {
         super([]);
+        this.size = new ModelElement_1.ModelElement(0);
         if (data) {
             for (let item of data) {
                 this.add(item);
             }
         }
     }
-
-    add(member: M): this {
+    add(member) {
         if (!this.addCallbacks)
-            this.addCallbacks = new Map<Collection,Set<UpdateCallback<ModelElement<M>,AbstractComponent>>>();
-
-        let newMember = new ModelElement<M>(member);
+            this.addCallbacks = new Map();
+        let newMember = new ModelElement_1.ModelElement(member);
         this.data.push(newMember);
         const index = this.data.length - 1;
         for (let callbackSet of this.addCallbacks.values()) {
@@ -33,8 +25,7 @@ export class ModelArray<M> extends ModelCollection<M,Array<ModelElement<M>>> {
         this.size.set(this.size.get() + 1);
         return this;
     }
-
-    remove(member: ModelElement<M>): this {
+    remove(member) {
         let index = this.data.indexOf(member);
         if (index !== -1) {
             member.destroy();
@@ -43,14 +34,13 @@ export class ModelArray<M> extends ModelCollection<M,Array<ModelElement<M>>> {
         this.size.set(this.size.get() - 1);
         return this;
     }
-
-    clear(): this {
+    clear() {
         while (this.data.length > 0)
             this.remove(this.data[0]);
         return this;
     }
-
-    subscribe(remoteStream: RemoteStream): void {
+    subscribe(remoteStream) {
         throw "Not implemented";
     }
 }
+exports.ModelArray = ModelArray;
