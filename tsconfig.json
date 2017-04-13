@@ -4,10 +4,10 @@
     "noImplicitAny": false,
     "removeComments": true,
     "sourceMap": false,
-    "target": "es6"
+    "target": "es6",
+    "experimentalDecorators": true
   },
   "include":[
-    "index.ts",
     "typings/*.d.ts",
     "src/*"
   ],

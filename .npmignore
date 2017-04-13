@@ -1,6 +1,3 @@
 .idea
-src/.idea
-src/chart
-src/race
-src/test
-src/tetris
+./chart
+./race

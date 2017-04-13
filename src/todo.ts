@@ -1,9 +1,5 @@
 // test application implementing todo.mvc requirements
-import Component from "../src/Component";
-import ModelElement from "../src/ModelElement";
-import ModelArray from "../src/ModelArray";
-import Collection from "../src/Collection";
-import {Binding, TwoWayBinding, persistentModel, persist, Serializable} from "../src/Binding";
+import * as tb from "../node_modules/taco-bell/index";
 
 const ENTER_KEY_CODE = 13;
 
@@ -18,27 +14,27 @@ enum TodoFilter {
     COMPLETED
 }
 
-@persist
+@tb.persist
 class Todo {
-    readonly description: ModelElement<string>;
-    readonly state: ModelElement<TodoState>;
-    readonly editing: ModelElement<boolean> = new ModelElement<boolean>(false);
+    readonly description: tb.ModelElement<string>;
+    readonly state: tb.ModelElement<TodoState>;
+    readonly editing: tb.ModelElement<boolean> = new tb.ModelElement<boolean>(false);
 
     constructor(description: string, state = TodoState.ACTIVE) {
-        this.description = new ModelElement<string>(description);
-        this.state = new ModelElement<TodoState>(state);
+        this.description = new tb.ModelElement<string>(description);
+        this.state = new tb.ModelElement<TodoState>(state);
     }
 }
 
-@persistentModel
-class TodoModel implements Serializable<TodoModel> {
-    readonly title: ModelElement<string>;
-    readonly todos: ModelArray<Todo>;
-    readonly filter: ModelElement<TodoFilter>;
+@tb.persistentModel
+class TodoModel implements tb.Serializable<TodoModel> {
+    readonly title: tb.ModelElement<string>;
+    readonly todos: tb.ModelArray<Todo>;
+    readonly filter: tb.ModelElement<TodoFilter>;
     constructor(title = "todos", initialFilter = TodoFilter.ALL) {
-        this.title = new ModelElement<string>(title);
-        this.todos = new ModelArray<Todo>();
-        this.filter = new ModelElement<TodoFilter>(initialFilter);
+        this.title = new tb.ModelElement<string>(title);
+        this.todos = new tb.ModelArray<Todo>();
+        this.filter = new tb.ModelElement<TodoFilter>(initialFilter);
     }
 
     serialize(): string {
@@ -72,13 +68,13 @@ class TodoModel implements Serializable<TodoModel> {
 
 const model = new TodoModel();
 
-class FilterHandle extends Component {
+class FilterHandle extends tb.Component {
     constructor(label: string, filter: TodoFilter) {
         super("li");
         this.child(
-            new Component("a")
+            new tb.Component("a")
                 .withText(label)
-                .withClass(new Binding<TodoFilter,string>(model.filter, function (currentFilter: TodoFilter): string {
+                .withClass(new tb.Binding<TodoFilter,string>(model.filter, function (currentFilter: TodoFilter): string {
                     return currentFilter == filter ? "selected" : "";
                 }))
                 .on("click", function (): void {
@@ -89,20 +85,20 @@ class FilterHandle extends Component {
     }
 }
 
-new Component("section", document.getElementById("app-root"))
+new tb.Component("section", document.getElementById("app-root"))
 .withClass("todoapp")
 .child(
-    new Component("header")
+    new tb.Component("header")
         .withClass("header")
         .child(
-            new Component("h1")
+            new tb.Component("h1")
                 .withText(model.title)
                 .reinit(),
-            new Component("input")
+            new tb.Component("input")
                 .withClass("new-todo")
                 .withAttribute("type", "text")
                 .withAttribute("placeholder", "What needs to be done?")
-                .on("keyup", function (this: Component, event: Event) {
+                .on("keyup", function (this: tb.Component, event: Event) {
                     if ((event as KeyboardEvent).keyCode === ENTER_KEY_CODE) {
                         let input = event.currentTarget as HTMLInputElement;
                         model.todos.add(new Todo(input.value));
@@ -110,10 +106,10 @@ new Component("section", document.getElementById("app-root"))
                     }
                 })
                 .reinit(),
-            new Component("section")
+            new tb.Component("section")
                 .withClass("main")
                 .child(
-                    new Component("input")
+                    new tb.Component("input")
                         .withAttribute("type", "checkbox")
                         .withClass("toggle-all")
                         .on("click", function (event: Event) {
@@ -123,26 +119,26 @@ new Component("section", document.getElementById("app-root"))
                         })
                         .reinit()
                 ).reinit(),
-            new Collection("ul")
+            new tb.Collection("ul")
                 .withClass("todo-list")
-                .children(model.todos, function(todo: ModelElement<Todo>) {
+                .children(model.todos, function(todo: tb.ModelElement<Todo>) {
 
-                    let label = new Component("label")
+                    let label = new tb.Component("label")
                         .withText(todo.get().description)
-                        .on("click", function (this: Component) {
+                        .on("click", function (this: tb.Component) {
                             todo.get().editing.set(true);
                             input.focus();
                             this.hide();
                         })
                         .reinit();
 
-                    let input = new Component("input")
+                    let input = new tb.Component("input")
                         .withAttribute("type","text")
-                        .withClass(new Binding<boolean,string>(todo.get().editing, function (nowEditing: boolean) {
+                        .withClass(new tb.Binding<boolean,string>(todo.get().editing, function (nowEditing: boolean) {
                             return nowEditing ? "edit" : "edit hidden";
                         }))
                         .withValue(todo.get().description)
-                        .on("focusout", function (this: Component, event: Event) {
+                        .on("focusout", function (this: tb.Component, event: Event) {
                             this.hide();
                             todo.get().editing.set(false);
                             let newDescription = (event.currentTarget as HTMLInputElement).value;
@@ -161,17 +157,17 @@ new Component("section", document.getElementById("app-root"))
                             ? ((todoState == TodoState.COMPLETED ? "completed ": "") + (editing ? "editing " : "")) : "hidden");
                     }
 
-                    return new Component("li")
+                    return new tb.Component("li")
                         .withClass(
-                            new Binding<TodoState,string>(todo.get().state, getTodoCssClass),
-                            new Binding<TodoFilter,string>(model.filter, getTodoCssClass),
-                            new Binding<boolean,string>(todo.get().editing, getTodoCssClass)
+                            new tb.Binding<TodoState,string>(todo.get().state, getTodoCssClass),
+                            new tb.Binding<TodoFilter,string>(model.filter, getTodoCssClass),
+                            new tb.Binding<boolean,string>(todo.get().editing, getTodoCssClass)
                         )
                         .child(
-                            new Component("input")
+                            new tb.Component("input")
                                 .withAttribute("type", "checkbox")
                                 .withClass("toggle")
-                                .withValue(new TwoWayBinding<boolean,TodoState,boolean>(todo.get().state, function (newState: TodoState) {
+                                .withValue(new tb.TwoWayBinding<boolean,TodoState,boolean>(todo.get().state, function (newState: TodoState) {
                                     return newState == TodoState.COMPLETED;
                                 }, function (isChecked: boolean): TodoState {
                                     return isChecked ? TodoState.COMPLETED : TodoState.ACTIVE;
@@ -179,7 +175,7 @@ new Component("section", document.getElementById("app-root"))
                                 .reinit(),
                             label,
                             input,
-                            new Component("button")
+                            new tb.Component("button")
                                 .withClass("destroy")
                                 .on("click", function () {
                                     model.todos.remove(todo);
@@ -189,21 +185,21 @@ new Component("section", document.getElementById("app-root"))
                         .reinit();
                 }).reinit()
         ).reinit(),
-    new Component("footer")
+    new tb.Component("footer")
         .withClass(
             "footer",
-            new Binding<number,string>(model.todos.size, function (currentSize: number) {
+            new tb.Binding<number,string>(model.todos.size, function (currentSize: number) {
                 return currentSize == 0 ? "hidden" : "";
             })
         )
         .child(
-            new Component("span")
+            new tb.Component("span")
                 .withClass("todo-count")
-                .withText(new Binding<number,string>(model.todos.size, function (newSize: number): string {
+                .withText(new tb.Binding<number,string>(model.todos.size, function (newSize: number): string {
                     return newSize + " items left";
                 }))
                 .reinit(),
-            new Component("ul")
+            new tb.Component("ul")
                 .withClass("filters")
                 .child(
                     new FilterHandle("All", TodoFilter.ALL),
