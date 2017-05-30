@@ -80,8 +80,7 @@ class FilterHandle extends tb.Component {
                 .on("click", function (): void {
                     model.filter.set(filter);
                 })
-                .reinit()
-        ).reinit();
+        );
     }
 }
 
@@ -92,8 +91,7 @@ new tb.Component("section", document.getElementById("app-root"))
         .withClass("header")
         .child(
             new tb.Component("h1")
-                .withText(model.title)
-                .reinit(),
+                .withText(model.title),
             new tb.Component("input")
                 .withClass("new-todo")
                 .withAttribute("type", "text")
@@ -104,8 +102,7 @@ new tb.Component("section", document.getElementById("app-root"))
                         model.todos.add(new Todo(input.value));
                         input.value = "";
                     }
-                })
-                .reinit(),
+                }),
             new tb.Component("section")
                 .withClass("main")
                 .child(
@@ -117,8 +114,7 @@ new tb.Component("section", document.getElementById("app-root"))
                             for (let todo of model.todos.get())
                                 todo.get().state.set(state);
                         })
-                        .reinit()
-                ).reinit(),
+                ),
             new tb.Collection("ul")
                 .withClass("todo-list")
                 .children(model.todos, function(todo: tb.ModelElement<Todo>) {
@@ -129,8 +125,7 @@ new tb.Component("section", document.getElementById("app-root"))
                             todo.get().editing.set(true);
                             input.focus();
                             this.hide();
-                        })
-                        .reinit();
+                        });
 
                     let input = new tb.Component("input")
                         .withAttribute("type","text")
@@ -144,8 +139,7 @@ new tb.Component("section", document.getElementById("app-root"))
                             let newDescription = (event.currentTarget as HTMLInputElement).value;
                             todo.get().description.set(newDescription);
                             label.show();
-                        })
-                        .reinit();
+                        });
 
                     function getTodoCssClass(): string {
                         let todoState = todo.get().state.get();
@@ -171,8 +165,7 @@ new tb.Component("section", document.getElementById("app-root"))
                                     return newState == TodoState.COMPLETED;
                                 }, function (isChecked: boolean): TodoState {
                                     return isChecked ? TodoState.COMPLETED : TodoState.ACTIVE;
-                                }))
-                                .reinit(),
+                                })),
                             label,
                             input,
                             new tb.Component("button")
@@ -180,11 +173,9 @@ new tb.Component("section", document.getElementById("app-root"))
                                 .on("click", function () {
                                     model.todos.remove(todo);
                                 })
-                                .reinit()
                         )
-                        .reinit();
-                }).reinit()
-        ).reinit(),
+                })
+        ),
     new tb.Component("footer")
         .withClass(
             "footer",
@@ -197,17 +188,17 @@ new tb.Component("section", document.getElementById("app-root"))
                 .withClass("todo-count")
                 .withText(new tb.Binding<number,string>(model.todos.size, function (newSize: number): string {
                     return newSize + " items left";
-                }))
-                .reinit(),
+                })),
             new tb.Component("ul")
                 .withClass("filters")
                 .child(
                     new FilterHandle("All", TodoFilter.ALL),
                     new FilterHandle("Active", TodoFilter.ACTIVE),
                     new FilterHandle("Completed", TodoFilter.COMPLETED)
-                ).reinit()
-        ).reinit()
-).reinit();
+                )
+        ));
+
+tb.ComponentQueue.cycle();
 
 // uncomment to allow global inspection of model state
 window["model"] = model;

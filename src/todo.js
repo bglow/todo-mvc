@@ -75,8 +75,7 @@ class FilterHandle extends tb.Component {
         }))
             .on("click", function () {
             model.filter.set(filter);
-        })
-            .reinit()).reinit();
+        }));
     }
 }
 new tb.Component("section", document.getElementById("app-root"))
@@ -84,8 +83,7 @@ new tb.Component("section", document.getElementById("app-root"))
     .child(new tb.Component("header")
     .withClass("header")
     .child(new tb.Component("h1")
-    .withText(model.title)
-    .reinit(), new tb.Component("input")
+    .withText(model.title), new tb.Component("input")
     .withClass("new-todo")
     .withAttribute("type", "text")
     .withAttribute("placeholder", "What needs to be done?")
@@ -95,8 +93,7 @@ new tb.Component("section", document.getElementById("app-root"))
         model.todos.add(new Todo(input.value));
         input.value = "";
     }
-})
-    .reinit(), new tb.Component("section")
+}), new tb.Component("section")
     .withClass("main")
     .child(new tb.Component("input")
     .withAttribute("type", "checkbox")
@@ -105,8 +102,7 @@ new tb.Component("section", document.getElementById("app-root"))
     let state = event.currentTarget.checked ? TodoState.COMPLETED : TodoState.ACTIVE;
     for (let todo of model.todos.get())
         todo.get().state.set(state);
-})
-    .reinit()).reinit(), new tb.Collection("ul")
+})), new tb.Collection("ul")
     .withClass("todo-list")
     .children(model.todos, function (todo) {
     let label = new tb.Component("label")
@@ -115,8 +111,7 @@ new tb.Component("section", document.getElementById("app-root"))
         todo.get().editing.set(true);
         input.focus();
         this.hide();
-    })
-        .reinit();
+    });
     let input = new tb.Component("input")
         .withAttribute("type", "text")
         .withClass(new tb.Binding(todo.get().editing, function (nowEditing) {
@@ -129,8 +124,7 @@ new tb.Component("section", document.getElementById("app-root"))
         let newDescription = event.currentTarget.value;
         todo.get().description.set(newDescription);
         label.show();
-    })
-        .reinit();
+    });
     function getTodoCssClass() {
         let todoState = todo.get().state.get();
         let editing = todo.get().editing.get();
@@ -149,15 +143,12 @@ new tb.Component("section", document.getElementById("app-root"))
         return newState == TodoState.COMPLETED;
     }, function (isChecked) {
         return isChecked ? TodoState.COMPLETED : TodoState.ACTIVE;
-    }))
-        .reinit(), label, input, new tb.Component("button")
+    })), label, input, new tb.Component("button")
         .withClass("destroy")
         .on("click", function () {
         model.todos.remove(todo);
-    })
-        .reinit())
-        .reinit();
-}).reinit()).reinit(), new tb.Component("footer")
+    }));
+})), new tb.Component("footer")
     .withClass("footer", new tb.Binding(model.todos.size, function (currentSize) {
     return currentSize == 0 ? "hidden" : "";
 }))
@@ -165,8 +156,8 @@ new tb.Component("section", document.getElementById("app-root"))
     .withClass("todo-count")
     .withText(new tb.Binding(model.todos.size, function (newSize) {
     return newSize + " items left";
-}))
-    .reinit(), new tb.Component("ul")
+})), new tb.Component("ul")
     .withClass("filters")
-    .child(new FilterHandle("All", TodoFilter.ALL), new FilterHandle("Active", TodoFilter.ACTIVE), new FilterHandle("Completed", TodoFilter.COMPLETED)).reinit()).reinit()).reinit();
+    .child(new FilterHandle("All", TodoFilter.ALL), new FilterHandle("Active", TodoFilter.ACTIVE), new FilterHandle("Completed", TodoFilter.COMPLETED))));
+tb.ComponentQueue.cycle();
 window["model"] = model;
