@@ -1,6 +1,6 @@
 {
   "name": "taco-bell-todo-mvc",
-  "version": "1.0.3",
+  "version": "1.1.0",
   "description": "Todo-mvc implementation using taco-bell framework",
   "repository": {
     "type": "git",
